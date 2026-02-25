@@ -15,6 +15,15 @@
 #     secrets-path: "../secrets.yaml"       # Path to secrets file (project root by default)
 
 # ==========================================================================
+local-simulation:
+  user-workflow:
+    workflow-name: "aegis-workflow-local"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local.json"
+    secrets-path: ""
+
+# ==========================================================================
 staging-settings:
   user-workflow:
     workflow-name: "aegis-workflow-staging"
@@ -22,7 +31,6 @@ staging-settings:
     workflow-path: "./main.ts"
     config-path: "./config.staging.json"
     secrets-path: ""
-    
 
 # ==========================================================================
 production-settings:
