@@ -44,15 +44,36 @@ export type Config = z.infer<typeof configSchema>;
 export type MerchantType = "EV_CHARGER" | "RETAIL" | "RIDE_SHARE";
 
 /**
- * Expected HTTP payload for risk assessment requests.
+ * Base payload structure for HTTP requests.
+ * Contains the functionName for routing to appropriate handlers.
  */
-export interface RiskAssessmentPayload {
+export interface BasePayload {
+    functionName: "secureIncrement" | "authorize";
+}
+
+/**
+ * Expected HTTP payload for risk assessment requests (secureIncrement function).
+ */
+export interface RiskAssessmentPayload extends BasePayload {
+    functionName: "secureIncrement";
     merchantType: MerchantType;
     user: string; // User wallet address (0x...)
     merchant: string; // Merchant wallet address (0x...)
     currentAuth: number; // Current authorized amount
     requestedTotal: number; // New requested total amount
     reason: string; // Reason for the adjustment
+}
+
+/**
+ * Expected HTTP payload for authorization requests (authorize function).
+ */
+export interface AuthorizePayload extends BasePayload {
+    functionName: "authorize";
+    user: string; // User wallet address (0x...)
+    merchant: string; // Merchant wallet address (0x...)
+    amount: number; // Amount to authorize
+    nonce: number; // User's current nonce for replay protection
+    signature: string; // User's EIP-712 signature (0x-prefixed)
 }
 
 /**
@@ -215,6 +236,39 @@ export interface FirestoreRiskLogData {
             stringValue: string;
         };
         rawJsonString: {
+            stringValue: string;
+        };
+        createdAt: {
+            integerValue: number;
+        };
+    };
+}
+
+/**
+ * Firestore document write payload structure for authorization logs.
+ * All fields must follow Firestore's typed field format.
+ */
+export interface FirestoreAuthorizeLogData {
+    fields: {
+        userAddress: {
+            stringValue: string;
+        };
+        merchantAddress: {
+            stringValue: string;
+        };
+        amount: {
+            integerValue: number;
+        };
+        nonce: {
+            integerValue: number;
+        };
+        signature: {
+            stringValue: string;
+        };
+        txHash: {
+            stringValue: string;
+        };
+        functionName: {
             stringValue: string;
         };
         createdAt: {

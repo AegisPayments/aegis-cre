@@ -8,8 +8,10 @@ import type {
     Config,
     TransactionHistoryItem,
     RiskAssessmentPayload,
+    AuthorizePayload,
     GeminiResponse,
     FirestoreRiskLogData,
+    FirestoreAuthorizeLogData,
     FirestoreWriteResponse,
     FirestoreQueryResponse,
     SignupNewUserResponse,
@@ -133,6 +135,58 @@ export function writeRiskAssessmentLog(
         const now = Date.now();
         return {
             name: `projects/mock-project/databases/(default)/documents/risk-assessments/${now}_${payload.user.slice(-8)}`,
+            fields: {},
+            createTime: new Date(now).toISOString(),
+            updateTime: new Date(now).toISOString(),
+        };
+    }
+}
+
+/**
+ * Writes authorization log to Firestore for audit trail.
+ * Records the authorization details and transaction hash for each authorize call.
+ *
+ * @param runtime - CRE runtime instance with config and secrets
+ * @param payload - Original authorize request payload
+ * @param txHash - Transaction hash from the authorize execution
+ * @returns Firestore write response with document metadata
+ */
+export function writeAuthorizeLog(
+    runtime: Runtime<Config>,
+    payload: AuthorizePayload,
+    txHash: string
+): FirestoreWriteResponse {
+    try {
+        const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
+        const firestoreProjectId = runtime.getSecret({ id: "FIREBASE_PROJECT_ID" }).result();
+
+        const httpClient = new cre.capabilities.HTTPClient();
+
+        // Obtain an ID token via Firebase anonymous authentication
+        const tokenResult: SignupNewUserResponse = httpClient
+            .sendRequest(
+                runtime,
+                postFirebaseIdToken(firestoreApiKey.value),
+                consensusIdenticalAggregation<SignupNewUserResponse>()
+            )(runtime.config)
+            .result();
+
+        // Write authorization log to Firestore
+        const writeResult: FirestoreWriteResponse = httpClient
+            .sendRequest(
+                runtime,
+                postAuthorizeLog(tokenResult.idToken, firestoreProjectId.value, payload, txHash),
+                consensusIdenticalAggregation<FirestoreWriteResponse>()
+            )(runtime.config)
+            .result();
+
+        return writeResult;
+    } catch (error) {
+        // Handle simulation mode or missing secrets with mock response
+        runtime.log("[SIMULATION] Using mock Firestore write response for authorize log");
+        const now = Date.now();
+        return {
+            name: `projects/mock-project/databases/(default)/documents/authorization-logs/${now}_${payload.user.slice(-8)}`,
             fields: {},
             createTime: new Date(now).toISOString(),
             updateTime: new Date(now).toISOString(),
@@ -278,6 +332,63 @@ const postRiskAssessmentLog =
 
             const req = {
                 url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/risk-assessments/?documentId=${documentId}`,
+                method: "POST" as const,
+                body: body,
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                cacheSettings: {
+                    store: true,
+                    maxAge: "60s",
+                },
+            };
+
+            const resp = sendRequester.sendRequest(req).result();
+            if (!ok(resp)) throw new Error(`HTTP request failed with status: ${resp.statusCode}`);
+
+            const bodyText = new TextDecoder().decode(resp.body);
+            const externalResp = JSON.parse(bodyText) as FirestoreWriteResponse;
+
+            return externalResp;
+        };
+
+/**
+ * Writes an authorization log document to Firestore.
+ * Uses a combination of timestamp and user address for document ID uniqueness.
+ *
+ * @param idToken - Firebase authentication token
+ * @param projectId - Firebase project ID
+ * @param payload - Authorize request payload
+ * @param txHash - Transaction hash from authorization execution
+ * @returns Function that performs the HTTP request and returns the Firestore response
+ */
+const postAuthorizeLog =
+    (idToken: string, projectId: string, payload: AuthorizePayload, txHash: string) =>
+        (sendRequester: HTTPSendRequester, config: Config): FirestoreWriteResponse => {
+            const now = Date.now();
+
+            const dataToSend: FirestoreAuthorizeLogData = {
+                fields: {
+                    userAddress: { stringValue: payload.user },
+                    merchantAddress: { stringValue: payload.merchant },
+                    amount: { integerValue: payload.amount },
+                    nonce: { integerValue: payload.nonce },
+                    signature: { stringValue: payload.signature },
+                    txHash: { stringValue: txHash },
+                    functionName: { stringValue: payload.functionName },
+                    createdAt: { integerValue: now },
+                },
+            };
+
+            const bodyBytes = new TextEncoder().encode(JSON.stringify(dataToSend));
+            const body = Buffer.from(bodyBytes).toString("base64");
+
+            // Use timestamp + user address hash for unique document ID
+            const documentId = `${now}_${payload.user.slice(-8)}`;
+
+            const req = {
+                url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/authorization-logs/?documentId=${documentId}`,
                 method: "POST" as const,
                 body: body,
                 headers: {
