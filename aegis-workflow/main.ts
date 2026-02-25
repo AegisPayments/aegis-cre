@@ -44,6 +44,7 @@ const SECURE_INCREMENT_PARAMS = parseAbiParameters("address user, address mercha
  * @param payload - HTTP payload containing the risk assessment request
  * @returns Success message or error response
  */
+// TODO: since in deployed workflows http tirgger can get called by authorized keys, we can trust the recieved payload for now.
 const onHttpTrigger = (runtime: Runtime<Config>, payload: HTTPPayload): string => {
   runtime.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   runtime.log("Aegis AI Risk Engine: Payment Risk Assessment");
