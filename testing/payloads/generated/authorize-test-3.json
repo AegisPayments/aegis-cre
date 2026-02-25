@@ -1,0 +1,8 @@
+{
+  "functionName": "authorize",
+  "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "merchant": "0x1111111111111111111111111111111111111111",
+  "amount": 50,
+  "nonce": 3,
+  "signature": "0x42aea93896605c462f37d29af06d459239c0f3deb2acd8c37e97b5c84031c31d263e2c92f3545f2ebc9aadebfb5497007e9f9fe02f57248429c75af247c92f361c"
+}

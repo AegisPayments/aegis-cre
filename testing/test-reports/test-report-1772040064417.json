@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-02-25T17:21:04.417Z",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "totalDuration": 24624
+  },
+  "results": [
+    {
+      "scriptName": "Signature Generation",
+      "exitCode": 0,
+      "duration": 291,
+      "success": true
+    },
+    {
+      "scriptName": "Authorize Workflow",
+      "exitCode": 0,
+      "duration": 18138,
+      "success": true
+    },
+    {
+      "scriptName": "SecureIncrement Workflow",
+      "exitCode": 0,
+      "duration": 6195,
+      "success": true
+    }
+  ]
+}

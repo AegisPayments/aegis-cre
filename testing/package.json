@@ -1,0 +1,16 @@
+{
+    "name": "aegis-cre-testing",
+    "version": "1.0.0",
+    "description": "Test scripts for Aegis CRE workflow",
+    "type": "module",
+    "scripts": {
+        "test:signatures": "node test-signature-generation.js",
+        "test:authorize": "node test-authorize-workflow.js",
+        "test:secure-increment": "node test-secure-increment-workflow.js",
+        "test:all": "node run-all-tests.js"
+    },
+    "devDependencies": {
+        "ethers": "^6.8.0",
+        "@types/node": "^20.0.0"
+    }
+}
