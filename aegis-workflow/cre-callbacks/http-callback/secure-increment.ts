@@ -13,13 +13,13 @@ import { encodeAbiParameters, parseAbiParameters } from "viem";
 import {
     type Config,
     type RiskAssessmentPayload,
-    type GeminiResponse,
+    type LLMResponse,
     type FirestoreWriteResponse,
     type TransactionHistoryItem,
     type LLMResult,
-    GeminiResponseSchema
+    LLMResponseSchema
 } from "../../types";
-import { assessPaymentRisk } from "../../gemini";
+import { assessPaymentRisk } from "../../llm";
 import { getRecentTransactions, writeRiskAssessmentLog } from "../../firebase";
 
 // ABI parameters for secureIncrement function with prefix
@@ -40,7 +40,7 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
 
     let txHash = ""; // Will be populated if transaction is executed
     let riskPayload: RiskAssessmentPayload | undefined;
-    let geminiResponse: GeminiResponse | undefined;
+    let llmResponse: LLMResponse | undefined;
 
     try {
         // ═══════════════════════════════════════════════════════════════
@@ -99,15 +99,15 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
             transactionHistory: historyString,
         };
 
-        geminiResponse = assessPaymentRisk(runtime, riskAssessmentDetails);
-        runtime.log(`[Step C] AI Risk Assessment Complete. Status: ${geminiResponse.statusCode}`);
-        runtime.log(`[Step C] Gemini Response: ${geminiResponse.geminiResponse}`);
+        llmResponse = assessPaymentRisk(runtime, riskAssessmentDetails);
+        runtime.log(`[Step C] AI Risk Assessment Complete. Status: ${llmResponse.statusCode}`);
+        runtime.log(`[Step C] LLM Response: ${llmResponse.llmResponse}`);
 
         // Parse and validate the Gemini response
         let llmResult: LLMResult;
         try {
-            const parsedResponse = JSON.parse(geminiResponse.geminiResponse);
-            llmResult = GeminiResponseSchema.parse(parsedResponse);
+            const parsedResponse = JSON.parse(llmResponse.llmResponse);
+            llmResult = LLMResponseSchema.parse(parsedResponse);
         } catch (parseError) {
             runtime.log(`[ERROR] Failed to parse Gemini response: ${parseError}`);
             throw new Error("Invalid AI response format");
@@ -138,7 +138,7 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
         const logResult: FirestoreWriteResponse = writeRiskAssessmentLog(
             runtime,
             riskPayload,
-            geminiResponse,
+            llmResponse,
             txHash
         );
 
@@ -174,9 +174,9 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
         runtime.log("───────────────────────────────────────────────────");
 
         // Still log the attempt even if it failed (if we have the required data)
-        if (riskPayload && geminiResponse) {
+        if (riskPayload && llmResponse) {
             try {
-                writeRiskAssessmentLog(runtime, riskPayload, geminiResponse, "");
+                writeRiskAssessmentLog(runtime, riskPayload, llmResponse, "");
             } catch (logError) {
                 runtime.log(`[WARNING] Failed to log error case: ${logError}`);
             }

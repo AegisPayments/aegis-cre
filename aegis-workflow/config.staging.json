@@ -1,5 +1,10 @@
 {
-  "geminiModel": "gemini-2.5-flash",
+  "llm": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "apiUrl": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    "apiKeyId": "GEMINI_API_KEY"
+  },
   "evmConfigs": [
     {
       "chainSelectorName": "ethereum-testnet-sepolia",

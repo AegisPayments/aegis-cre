@@ -9,7 +9,7 @@ import type {
     TransactionHistoryItem,
     RiskAssessmentPayload,
     AuthorizePayload,
-    GeminiResponse,
+    LLMResponse,
     FirestoreRiskLogData,
     FirestoreAuthorizeLogData,
     FirestoreWriteResponse,
@@ -94,14 +94,14 @@ export function getRecentTransactions(
  *
  * @param runtime - CRE runtime instance with config and secrets
  * @param payload - Original risk assessment request payload
- * @param geminiResponse - Gemini API response containing the decision
+ * @param llmResponse - LLM API response containing the decision
  * @param txHash - Transaction hash if the decision was approved and executed
  * @returns Firestore write response with document metadata
  */
 export function writeRiskAssessmentLog(
     runtime: Runtime<Config>,
     payload: RiskAssessmentPayload,
-    geminiResponse: GeminiResponse,
+    llmResponse: LLMResponse,
     txHash: string
 ): FirestoreWriteResponse {
     try {
@@ -123,7 +123,7 @@ export function writeRiskAssessmentLog(
         const writeResult: FirestoreWriteResponse = httpClient
             .sendRequest(
                 runtime,
-                postRiskAssessmentLog(tokenResult.idToken, firestoreProjectId.value, payload, geminiResponse, txHash),
+                postRiskAssessmentLog(tokenResult.idToken, firestoreProjectId.value, payload, llmResponse, txHash),
                 consensusIdenticalAggregation<FirestoreWriteResponse>()
             )(runtime.config)
             .result();
@@ -285,12 +285,12 @@ const queryTransactionHistory =
  * @param idToken - Firebase authentication token
  * @param projectId - Firebase project ID
  * @param payload - Risk assessment request payload
- * @param geminiResponse - Gemini API response
+ * @param llmResponse - LLM API response
  * @param txHash - Transaction hash (empty if rejected)
  * @returns Function that performs the HTTP request and returns the Firestore response
  */
 const postRiskAssessmentLog =
-    (idToken: string, projectId: string, payload: RiskAssessmentPayload, geminiResponse: GeminiResponse, txHash: string) =>
+    (idToken: string, projectId: string, payload: RiskAssessmentPayload, llmResponse: LLMResponse, txHash: string) =>
         (sendRequester: HTTPSendRequester, config: Config): FirestoreWriteResponse => {
             const now = Date.now();
 
@@ -299,7 +299,7 @@ const postRiskAssessmentLog =
             let confidence = 0;
 
             try {
-                const parsedResponse = JSON.parse(geminiResponse.geminiResponse);
+                const parsedResponse = JSON.parse(llmResponse.llmResponse);
                 riskDecision = parsedResponse.result || "ERROR";
                 confidence = parsedResponse.confidence || 0;
             } catch (e) {
@@ -317,9 +317,9 @@ const postRiskAssessmentLog =
                     riskDecision: { stringValue: riskDecision },
                     confidence: { integerValue: confidence },
                     txHash: { stringValue: txHash },
-                    geminiResponse: { stringValue: geminiResponse.geminiResponse },
-                    responseId: { stringValue: geminiResponse.responseId },
-                    rawJsonString: { stringValue: geminiResponse.rawJsonString },
+                    llmResponse: { stringValue: llmResponse.llmResponse },
+                    responseId: { stringValue: llmResponse.responseId },
+                    rawJsonString: { stringValue: llmResponse.rawJsonString },
                     createdAt: { integerValue: now },
                 },
             };

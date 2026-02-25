@@ -23,11 +23,22 @@ const evmConfigSchema = z.object({
 });
 
 /**
+ * Schema for LLM provider configuration.
+ * Supports both Gemini and OpenAI providers with flexible URL configuration.
+ */
+const llmConfigSchema = z.object({
+    provider: z.enum(["gemini", "openai"]),
+    model: z.string(),
+    apiUrl: z.string().min(1), // TODO: later remove this Less strict URL validation and switch to url()
+    apiKeyId: z.string(), // Secret ID for the API key
+});
+
+/**
  * Schema for the main workflow configuration file (config.json).
- * Validates Gemini model name and array of EVM configurations.
+ * Validates LLM configuration and array of EVM configurations.
  */
 export const configSchema = z.object({
-    geminiModel: z.string(),
+    llm: llmConfigSchema,
     evmConfigs: z.array(evmConfigSchema).min(1, "At least one EVM config is required"),
 });
 
@@ -42,6 +53,18 @@ export type Config = z.infer<typeof configSchema>;
  * Merchant types that determine risk assessment rules.
  */
 export type MerchantType = "EV_CHARGER" | "RETAIL" | "RIDE_SHARE";
+
+/**
+ * Fraud detection context for authorization requests.
+ */
+export interface FraudAssessmentDetails {
+    userAddress: string;
+    merchantAddress: string;
+    amount: number;
+    nonce: number;
+    signature: string;
+    transactionHistory: string;
+}
 
 /**
  * Base payload structure for HTTP requests.
@@ -96,32 +119,32 @@ export interface RiskAssessmentContext {
 }
 
 /*********************************
- * Gemini API Types
+ * LLM API Types (Gemini & OpenAI)
  *********************************/
 
 /**
- * Response from the Gemini API HTTP request.
+ * Response from the LLM API HTTP request.
  * Contains both the parsed result and raw response data.
  */
-export type GeminiResponse = {
+export type LLMResponse = {
     statusCode: number;
-    geminiResponse: string; // Parsed JSON string from Gemini
+    llmResponse: string; // Parsed JSON string from LLM
     responseId: string; // Unique identifier for this request
     rawJsonString: string; // Full raw response body
 };
 
 /**
- * Schema for validating Gemini's JSON response format.
+ * Schema for validating LLM's JSON response format.
  * Ensures the model returns a valid risk assessment decision.
  */
-export const GeminiResponseSchema = z.object({
+export const LLMResponseSchema = z.object({
     result: z.enum(["YES", "NO"]),
     confidence: z.number().int().min(0).max(10_000, "confidence must be between 0 and 10000 inclusive"),
     reasoning: z.string().optional(), // Optional reasoning for the decision
 });
 
 /** Validated LLM result type. */
-export type LLMResult = z.infer<typeof GeminiResponseSchema>;
+export type LLMResult = z.infer<typeof LLMResponseSchema>;
 
 /**
  * Request payload structure for Gemini API.
@@ -137,6 +160,20 @@ export interface GeminiData {
 }
 
 /**
+ * Request payload structure for OpenAI API.
+ */
+export interface OpenAIData {
+    model: string;
+    messages: {
+        role: "system" | "user" | "assistant";
+        content: string;
+    }[];
+    response_format?: {
+        type: "json_object";
+    };
+}
+
+/**
  * Response structure from Gemini API.
  * Contains the generated content and a unique response ID.
  */
@@ -147,6 +184,29 @@ export interface GeminiApiResponse {
         };
     }[];
     responseId: string;
+}
+
+/**
+ * Response structure from OpenAI API.
+ */
+export interface OpenAIApiResponse {
+    id: string;
+    object: string;
+    created: number;
+    model: string;
+    choices: {
+        index: number;
+        message: {
+            role: string;
+            content: string;
+        };
+        finish_reason: string;
+    }[];
+    usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
 }
 
 /**
@@ -229,7 +289,52 @@ export interface FirestoreRiskLogData {
         txHash: {
             stringValue: string;
         };
-        geminiResponse: {
+        llmResponse: {
+            stringValue: string;
+        };
+        responseId: {
+            stringValue: string;
+        };
+        rawJsonString: {
+            stringValue: string;
+        };
+        createdAt: {
+            integerValue: number;
+        };
+    };
+}
+
+/**
+ * Firestore document write payload structure for fraud assessment logs.
+ * All fields must follow Firestore's typed field format.
+ */
+export interface FirestoreFraudLogData {
+    fields: {
+        userAddress: {
+            stringValue: string;
+        };
+        merchantAddress: {
+            stringValue: string;
+        };
+        amount: {
+            integerValue: number;
+        };
+        nonce: {
+            integerValue: number;
+        };
+        signature: {
+            stringValue: string;
+        };
+        fraudDecision: {
+            stringValue: string;
+        };
+        confidence: {
+            integerValue: number;
+        };
+        txHash: {
+            stringValue: string;
+        };
+        llmResponse: {
             stringValue: string;
         };
         responseId: {

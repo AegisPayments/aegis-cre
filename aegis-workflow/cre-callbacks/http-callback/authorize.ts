@@ -14,15 +14,21 @@ import {
     type Config,
     type AuthorizePayload,
     type FirestoreWriteResponse,
+    type LLMResponse,
+    type LLMResult,
+    type FraudAssessmentDetails,
+    type TransactionHistoryItem,
+    LLMResponseSchema,
 } from "../../types";
-import { writeAuthorizeLog } from "../../firebase";
+import { writeAuthorizeLog, getRecentTransactions } from "../../firebase";
+import { assessFraudRisk } from "../../llm";
 
 // ABI parameters for authorize function with prefix
 const AUTHORIZE_PARAMS = parseAbiParameters("address user, address merchant, uint256 amount, uint256 nonce, bytes signature");
 
 /**
  * Handles authorize requests - Payment authorization with cryptographic signature verification.
- * Currently logs to Firestore for audit trail. Future enhancement will include AI fraud detection.
+ * Includes AI-powered fraud detection and logs to Firestore for audit trail.
  * 
  * @param runtime - CRE runtime instance with config and secrets
  * @param inputString - JSON string containing the authorize request
@@ -35,6 +41,7 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
 
     let txHash = ""; // Will be populated if transaction is executed
     let authorizePayload: AuthorizePayload | undefined;
+    let fraudResponse: LLMResponse | undefined;
 
     try {
         // ═══════════════════════════════════════════════════════════════
@@ -77,17 +84,76 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // Step 2: Execute On-Chain Authorization
+        // Step 2: AI-Powered Fraud Detection
         // ═══════════════════════════════════════════════════════════════
-        runtime.log("[Step 2] Executing authorize on-chain...");
+        runtime.log("[Step 2] Running AI fraud detection...");
+
+        // Fetch transaction history for fraud analysis context
+        const transactionHistory: TransactionHistoryItem[] = getRecentTransactions(
+            runtime,
+            authorizePayload.user,
+            authorizePayload.merchant
+        );
+
+        const historyString = transactionHistory.length > 0
+            ? `Recent transactions between ${authorizePayload.user} and ${authorizePayload.merchant}: [${transactionHistory.map(tx => `$${tx.amount}`).join(', ')}]`
+            : `No transaction history found between ${authorizePayload.user} and ${authorizePayload.merchant}`;
+
+        runtime.log(`[Step 2] Transaction History: ${historyString}`);
+
+        const fraudAssessmentDetails: FraudAssessmentDetails = {
+            userAddress: authorizePayload.user,
+            merchantAddress: authorizePayload.merchant,
+            amount: authorizePayload.amount,
+            nonce: authorizePayload.nonce,
+            signature: authorizePayload.signature,
+            transactionHistory: historyString,
+        };
+
+        fraudResponse = assessFraudRisk(runtime, fraudAssessmentDetails);
+        runtime.log(`[Step 2] AI Fraud Assessment Complete. Status: ${fraudResponse.statusCode}`);
+        runtime.log(`[Step 2] LLM Response: ${fraudResponse.llmResponse}`);
+
+        // Parse and validate the LLM response
+        let fraudResult: LLMResult;
+        try {
+            fraudResult = LLMResponseSchema.parse(JSON.parse(fraudResponse.llmResponse));
+        } catch (parseError) {
+            runtime.log(`[ERROR] Failed to parse LLM fraud response: ${parseError}`);
+            throw new Error("Invalid LLM fraud response format");
+        }
+
+        runtime.log(`[Step 2] AI Fraud Decision: ${fraudResult.result} (confidence: ${fraudResult.confidence}/10000)`);
+        if (fraudResult.reasoning) {
+            runtime.log(`[Step 2] Reasoning: ${fraudResult.reasoning}`);
+        }
+
+        // Block transaction if fraud detected
+        if (fraudResult.result === "NO") {
+            runtime.log(`[Step 2] ❌ Transaction blocked due to fraud detection`);
+            return JSON.stringify({
+                status: "fraud_detected",
+                message: "Transaction blocked due to fraud detection",
+                functionName: "authorize",
+                confidence: fraudResult.confidence,
+                reasoning: fraudResult.reasoning || "AI fraud detection triggered"
+            });
+        }
+
+        runtime.log(`[Step 2] ✓ Fraud check passed, proceeding with authorization`);
+
+        // ═══════════════════════════════════════════════════════════════
+        // Step 3: Execute On-Chain Authorization
+        // ═══════════════════════════════════════════════════════════════
+        runtime.log("[Step 3] Executing authorize on-chain...");
 
         txHash = executeAuthorize(runtime, authorizePayload);
-        runtime.log(`[Step 2] ✓ authorize transaction executed: ${txHash}`);
+        runtime.log(`[Step 3] ✓ authorize transaction executed: ${txHash}`);
 
         // ═══════════════════════════════════════════════════════════════
-        // Step 3: Log Authorization for Audit Trail
+        // Step 4: Log Authorization for Audit Trail
         // ═══════════════════════════════════════════════════════════════
-        runtime.log("[Step 3] Writing authorization log to Firestore...");
+        runtime.log("[Step 4] Writing authorization log to Firestore...");
 
         const logResult: FirestoreWriteResponse = writeAuthorizeLog(
             runtime,
@@ -95,22 +161,24 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
             txHash
         );
 
-        runtime.log(`[Step 3] Authorization logged: ${logResult.name}`);
+        runtime.log(`[Step 4] Authorization logged: ${logResult.name}`);
 
         // ═══════════════════════════════════════════════════════════════
-        // Step 4: Return Success Response
+        // Step 5: Return Success Response
         // ═══════════════════════════════════════════════════════════════
         runtime.log("───────────────────────────────────────────────────");
 
         return JSON.stringify({
             status: "authorized",
-            message: "Payment authorization processed successfully",
+            message: "Payment authorization processed successfully with AI fraud protection",
             functionName: "authorize",
             txHash: txHash,
             user: authorizePayload.user,
             merchant: authorizePayload.merchant,
             amount: authorizePayload.amount,
-            nonce: authorizePayload.nonce
+            nonce: authorizePayload.nonce,
+            fraudConfidence: fraudResult?.confidence,
+            fraudReasoning: fraudResult?.reasoning
         });
 
     } catch (err) {
@@ -125,6 +193,11 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
             } catch (logError) {
                 runtime.log(`[WARNING] Failed to log error case: ${logError}`);
             }
+        }
+
+        // Log fraud assessment if available
+        if (fraudResponse) {
+            runtime.log(`[INFO] Fraud assessment was completed before failure: ${fraudResponse.llmResponse}`);
         }
 
         return JSON.stringify({
