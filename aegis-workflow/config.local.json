@@ -1,8 +1,10 @@
 {
+    "geminiModel": "gemini-2.5-flash",
     "evmConfigs": [
         {
             "chainSelectorName": "ethereum-testnet-sepolia",
-            "contractAddress": "0x1234567890123456789012345678901234567890"
+            "contractAddress": "0x1234567890123456789012345678901234567890",
+            "gasLimit": "2000000"
         }
     ]
 }
