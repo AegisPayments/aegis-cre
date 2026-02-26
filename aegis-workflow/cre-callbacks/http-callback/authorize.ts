@@ -279,7 +279,9 @@ function executeAuthorize(runtime: Runtime<Config>, payload: AuthorizePayload): 
 
     // Check execution result
     if (writeResult.txStatus === TxStatus.SUCCESS) {
-        return bytesToHex(writeResult.txHash || new Uint8Array(32));
+        const txHash = bytesToHex(writeResult.txHash || new Uint8Array(32))
+        runtime.log(`Transaction successful: ${txHash}`)
+        return txHash
     }
 
     throw new Error(`authorize transaction failed with status: ${writeResult.txStatus}`);

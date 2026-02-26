@@ -259,7 +259,9 @@ function executeSecureIncrement(runtime: Runtime<Config>, payload: RiskAssessmen
 
     // Check execution result
     if (writeResult.txStatus === TxStatus.SUCCESS) {
-        return bytesToHex(writeResult.txHash || new Uint8Array(32));
+        const txHash = bytesToHex(writeResult.txHash || new Uint8Array(32))
+        runtime.log(`Transaction successful: ${txHash}`)
+        return txHash
     }
 
     throw new Error(`secureIncrement transaction failed with status: ${writeResult.txStatus}`);
