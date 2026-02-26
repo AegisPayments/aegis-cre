@@ -82,9 +82,10 @@ export interface RiskAssessmentPayload extends BasePayload {
     merchantType: MerchantType;
     user: string; // User wallet address (0x...)
     merchant: string; // Merchant wallet address (0x...)
-    currentAuth: number; // Current authorized amount
+    currentAuth: number; // Current authorized amount. // TODO: query from db. For now should match th value for authorizationLogId in the firestore collection
     requestedTotal: number; // New requested total amount
     reason: string; // Reason for the adjustment
+    authorizationLogId: string; // ID of the authorization log being incremented
 }
 
 /**
@@ -278,6 +279,9 @@ export interface FirestoreRiskLogData {
             integerValue: number;
         };
         reason: {
+            stringValue: string;
+        };
+        authorizationLogId: {
             stringValue: string;
         };
         riskDecision: {

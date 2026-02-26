@@ -5,5 +5,6 @@
     "merchant": "0x0987654321098765432109876543210987654321",
     "currentAuth": 50,
     "requestedTotal": 75,
-    "reason": "Additional charging time needed"
+    "reason": "Additional charging time needed",
+    "authorizationLogId": "1772076522483_62266"
 }

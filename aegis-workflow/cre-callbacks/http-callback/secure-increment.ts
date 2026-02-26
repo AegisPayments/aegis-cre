@@ -54,14 +54,16 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
         runtime.log(`  Current Auth: $${riskPayload.currentAuth}`);
         runtime.log(`  Requested Total: $${riskPayload.requestedTotal}`);
         runtime.log(`  Reason: "${riskPayload.reason}"`);
+        runtime.log(`  Authorization Log ID: ${riskPayload.authorizationLogId}`);
 
         // Validate required fields for secureIncrement
         if (!riskPayload.merchantType || !riskPayload.user || !riskPayload.merchant ||
-            riskPayload.currentAuth === undefined || riskPayload.requestedTotal === undefined || !riskPayload.reason) {
+            riskPayload.currentAuth === undefined || riskPayload.requestedTotal === undefined ||
+            !riskPayload.reason || !riskPayload.authorizationLogId) {
             runtime.log("[ERROR] Missing required fields in secureIncrement request");
             return JSON.stringify({
                 status: "error",
-                message: "Missing required fields: merchantType, user, merchant, currentAuth, requestedTotal, reason"
+                message: "Missing required fields: merchantType, user, merchant, currentAuth, requestedTotal, reason, authorizationLogId"
             });
         }
 

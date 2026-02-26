@@ -22,13 +22,13 @@ import type {
  *********************************/
 
 /**
- * Retrieves recent transaction history for a user-merchant pair from Firestore.
+ * Retrieves recent history (authorizations + risk assessments) for a user-merchant pair from Firestore.
  * Used to provide context for risk assessment decisions.
  *
  * @param runtime - CRE runtime instance with config and secrets
  * @param userAddress - User wallet address
  * @param merchantAddress - Merchant wallet address
- * @returns Array of recent transaction history items (up to 5)
+ * @returns Array of recent history items (up to 10 combined)
  */
 export function getRecentTransactions(
     runtime: Runtime<Config>,
@@ -51,32 +51,16 @@ export function getRecentTransactions(
             .result();
 
         // Query Firestore for recent transactions
-        const queryResult: FirestoreQueryResponse = httpClient
+        const queryResult: TransactionHistoryItem[] = httpClient
             .sendRequest(
                 runtime,
-                queryTransactionHistory(tokenResult.idToken, firestoreProjectId.value, userAddress, merchantAddress),
-                consensusIdenticalAggregation<FirestoreQueryResponse>()
+                queryHistory(tokenResult.idToken, firestoreProjectId.value, userAddress, merchantAddress),
+                consensusIdenticalAggregation<TransactionHistoryItem[]>()
             )(runtime.config)
             .result();
 
-        // Transform Firestore response to TransactionHistoryItem array
-        const transactions: TransactionHistoryItem[] = [];
-
-        if (queryResult.documents) {
-            for (const doc of queryResult.documents) {
-                transactions.push({
-                    amount: parseInt(doc.fields.amount.integerValue),
-                    timestamp: parseInt(doc.fields.timestamp.integerValue),
-                    merchant: doc.fields.merchantAddress.stringValue,
-                    user: doc.fields.userAddress.stringValue,
-                });
-            }
-        }
-
-        // Sort by timestamp descending and take last 5
-        return transactions
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 5);
+        // Return the combined history
+        return queryResult;
     } catch (error) {
         // Handle simulation mode or missing secrets by returning mock data
         runtime.log("[SIMULATION] Using mock transaction history data");
@@ -237,50 +221,105 @@ const postFirebaseIdToken =
         };
 
 /**
- * Queries Firestore for transaction history between a user and merchant.
- * Limited to recent transactions to provide context for risk assessment.
+ * Queries Firestore for combined history (authorizations + risk assessments) between a user and merchant.
+ * Returns unified TransactionHistoryItem array for risk assessment context.
  *
  * @param idToken - Firebase authentication token
  * @param projectId - Firebase project ID
  * @param userAddress - User wallet address to filter by
  * @param merchantAddress - Merchant wallet address to filter by
- * @returns Function that performs the HTTP request and returns the query response
+ * @returns Function that performs the HTTP request and returns unified history array
  */
-const queryTransactionHistory =
+const queryHistory =
     (idToken: string, projectId: string, userAddress: string, merchantAddress: string) =>
-        (sendRequester: HTTPSendRequester, config: Config): FirestoreQueryResponse => {
-            // Note: This is a simplified query. In production, you might want to use
-            // Firestore's structured query API or composite indexes for more complex filtering
-            const req = {
-                url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/transactions?orderBy=timestamp%20desc&pageSize=10`,
-                method: "GET" as const,
-                headers: {
-                    Authorization: `Bearer ${idToken}`,
-                    "Content-Type": "application/json",
-                },
-                cacheSettings: {
-                    // store: false, // Always fetch fresh transaction data
-                    // maxAge: "0s",
-                    readFromCache: false,
-                    maxAgeMs: 0,
-                },
-            };
+        (sendRequester: HTTPSendRequester, config: Config): TransactionHistoryItem[] => {
+            const history: TransactionHistoryItem[] = [];
 
-            const resp = sendRequester.sendRequest(req).result();
-            if (!ok(resp)) throw new Error(`HTTP request failed with status: ${resp.statusCode}`);
+            try {
+                // Query authorization-logs collection
+                const authReq = {
+                    url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/authorization-logs?orderBy=createdAt%20desc&pageSize=10`,
+                    method: "GET" as const,
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    cacheSettings: {
+                        readFromCache: false,
+                        maxAgeMs: 0,
+                    },
+                };
 
-            const bodyText = new TextDecoder().decode(resp.body);
-            const queryResponse = JSON.parse(bodyText) as FirestoreQueryResponse;
+                const authResp = sendRequester.sendRequest(authReq).result();
+                if (ok(authResp)) {
+                    const authBodyText = new TextDecoder().decode(authResp.body);
+                    const authResponse = JSON.parse(authBodyText) as FirestoreQueryResponse;
 
-            // Filter results to match user-merchant pair
-            if (queryResponse.documents) {
-                queryResponse.documents = queryResponse.documents.filter(doc =>
-                    doc.fields.userAddress.stringValue === userAddress &&
-                    doc.fields.merchantAddress.stringValue === merchantAddress
-                );
+                    if (authResponse.documents) {
+                        authResponse.documents
+                            .filter(doc =>
+                                doc.fields.userAddress?.stringValue === userAddress &&
+                                doc.fields.merchantAddress?.stringValue === merchantAddress
+                            )
+                            .forEach(doc => {
+                                history.push({
+                                    amount: parseInt(doc.fields.amount?.integerValue || "0"),
+                                    timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
+                                    merchant: doc.fields.merchantAddress?.stringValue || "",
+                                    user: doc.fields.userAddress?.stringValue || "",
+                                });
+                            });
+                    }
+                }
+            } catch (e) {
+                // Continue even if authorization-logs query fails
             }
 
-            return queryResponse;
+            try {
+                // Query risk-assessments collection
+                const riskReq = {
+                    url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/risk-assessments?orderBy=createdAt%20desc&pageSize=10`,
+                    method: "GET" as const,
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    cacheSettings: {
+                        readFromCache: false,
+                        maxAgeMs: 0,
+                    },
+                };
+
+                const riskResp = sendRequester.sendRequest(riskReq).result();
+                if (ok(riskResp)) {
+                    const riskBodyText = new TextDecoder().decode(riskResp.body);
+                    const riskResponse = JSON.parse(riskBodyText) as FirestoreQueryResponse;
+
+                    if (riskResponse.documents) {
+                        riskResponse.documents
+                            .filter(doc =>
+                                doc.fields.userAddress?.stringValue === userAddress &&
+                                doc.fields.merchantAddress?.stringValue === merchantAddress &&
+                                doc.fields.riskDecision?.stringValue === "YES" // Only approved increments
+                            )
+                            .forEach(doc => {
+                                history.push({
+                                    amount: parseInt(doc.fields.requestedTotal?.integerValue || "0"),
+                                    timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
+                                    merchant: doc.fields.merchantAddress?.stringValue || "",
+                                    user: doc.fields.userAddress?.stringValue || "",
+                                });
+                            });
+                    }
+                }
+            } catch (e) {
+                // Continue even if risk-assessments query fails
+            }
+
+            // Sort by timestamp descending and limit to 10 most recent
+            return history
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, 10);
         };
 
 /**
@@ -319,6 +358,7 @@ const postRiskAssessmentLog =
                     currentAuth: { integerValue: payload.currentAuth },
                     requestedTotal: { integerValue: payload.requestedTotal },
                     reason: { stringValue: payload.reason },
+                    authorizationLogId: { stringValue: payload.authorizationLogId },
                     riskDecision: { stringValue: riskDecision },
                     confidence: { integerValue: confidence },
                     txHash: { stringValue: txHash },
