@@ -90,22 +90,29 @@ function runCRESimulation(payloadPath) {
 }
 
 /**
- * Find all authorize test payload files
+ * Find authorize test payload files with optional filtering
  */
-function findAuthorizePayloads() {
+function findAuthorizePayloads(fileFilters = []) {
   const payloadsDir = path.resolve(CONFIG.PAYLOADS_DIR);
 
   if (!fs.existsSync(payloadsDir)) {
     console.log(
-      "📁 Payloads directory does not exist, creating sample payloads...",
+      "📁 Payloads directory does not exist, run `node test-signature-generation.js` first...",
     );
     return [];
   }
 
   const files = fs.readdirSync(payloadsDir);
-  const authorizePayloads = files
+  let authorizePayloads = files
     .filter((file) => file.startsWith("authorize-") && file.endsWith(".json"))
     .map((file) => path.join(payloadsDir, file));
+
+  // Apply file filters if provided
+  if (fileFilters.length > 0) {
+    authorizePayloads = authorizePayloads.filter((filePath) =>
+      fileFilters.some((filter) => path.basename(filePath) === filter),
+    );
+  }
 
   return authorizePayloads;
 }
@@ -190,17 +197,99 @@ function analyzeTestResult(payloadPath, result) {
 }
 
 /**
+ * Display usage information
+ */
+function displayUsage() {
+  console.log(`
+🔐 CRE Workflow Test Runner for Authorize Function
+${"=".repeat(60)}
+
+Usage:
+  node test-authorize-workflow.js [files...]
+  node test-authorize-workflow.js --files [files...]
+  node test-authorize-workflow.js --help
+
+Examples:
+  # Run all tests
+  node test-authorize-workflow.js
+
+  # Run specific files
+  node test-authorize-workflow.js authorize-test-2.json authorize-test-3.json
+
+  # Using --files flag
+  node test-authorize-workflow.js --files authorize-test-2.json authorize-test-3.json
+
+  # Show help
+  node test-authorize-workflow.js --help
+
+Options:
+  --files     Specify which JSON files to test (optional)
+  --help      Show this help message
+`);
+}
+
+/**
+ * Parse command line arguments for file filtering
+ */
+function parseCommandLineArgs() {
+  const args = process.argv.slice(2);
+
+  // Check for help flag
+  if (args.includes("--help") || args.includes("-h")) {
+    displayUsage();
+    process.exit(0);
+  }
+
+  const fileFilters = [];
+
+  // Check for --files flag
+  const filesIndex = args.indexOf("--files");
+  if (filesIndex !== -1) {
+    // Get all arguments after --files
+    const filesArgs = args.slice(filesIndex + 1);
+    fileFilters.push(...filesArgs);
+  } else {
+    // If no --files flag, treat all arguments as file names
+    fileFilters.push(...args);
+  }
+
+  return fileFilters;
+}
+
+/**
  * Main test function
  */
 async function main() {
   console.log("🔐 Starting Authorize Workflow Tests");
   console.log("=".repeat(60));
 
-  let payloadFiles = findAuthorizePayloads();
+  // Parse command line arguments
+  const fileFilters = parseCommandLineArgs();
+
+  if (fileFilters.length > 0) {
+    console.log(`🎯 Filtering for specific files: ${fileFilters.join(", ")}`);
+  }
+
+  let payloadFiles = findAuthorizePayloads(fileFilters);
 
   if (payloadFiles.length === 0) {
-    console.log("📭 No authorize payloads found, creating sample...");
-    payloadFiles = createSampleAuthorizePayload();
+    if (fileFilters.length > 0) {
+      console.log(
+        `📭 No matching authorize payloads found for filters: ${fileFilters.join(", ")}`,
+      );
+      console.log("   Available files in payloads directory:");
+      const allFiles = findAuthorizePayloads();
+      allFiles.forEach((file) => {
+        console.log(`     - ${path.basename(file)}`);
+      });
+    } else {
+      console.log(
+        "📭 No authorize payloads found, Run `node test-signature-generation.js` first..",
+      );
+    }
+    throw new Error(
+      "No authorize payloads found. Please run `node test-signature-generation.js` to generate test payloads with valid signatures.",
+    );
   }
 
   console.log(`\\n📋 Found ${payloadFiles.length} payload(s) to test:`);
@@ -237,6 +326,9 @@ async function main() {
   console.log("\\n" + "=".repeat(60));
   console.log("📈 Test Summary");
   console.log("=".repeat(60));
+  if (fileFilters.length > 0) {
+    console.log(`🎯 Tested Files: ${fileFilters.join(", ")}`);
+  }
   console.log(`✅ Passed: ${passed}`);
   console.log(`❌ Failed: ${failed}`);
   console.log(`📊 Total: ${passed + failed}`);

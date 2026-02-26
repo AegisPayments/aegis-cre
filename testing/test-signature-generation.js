@@ -25,17 +25,17 @@ const CONFIG = {
   // Test scenarios
   TEST_SCENARIOS: [
     {
-      name: "Basic Authorization",
-      user: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Corresponds to the test private key
-      merchant: "0x0987654321098765432109876543210987654321",
-      amount: 100,
-      nonce: 1,
-    },
-    {
       name: "Large Amount Authorization",
       user: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       merchant: "0x0987654321098765432109876543210987654321",
       amount: 1000,
+      nonce: 1,
+    },
+    {
+      name: "Basic Authorization",
+      user: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Corresponds to the test private key
+      merchant: "0x0987654321098765432109876543210987654321",
+      amount: 100,
       nonce: 2,
     },
     {

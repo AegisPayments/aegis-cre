@@ -125,6 +125,7 @@ function createSampleSecureIncrementPayloads() {
     {
       name: "EV Charger Basic",
       payload: {
+        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
         functionName: "secureIncrement",
         merchantType: "EV_CHARGER",
         user: "0x1234567890123456789012345678901234567890",
@@ -137,6 +138,7 @@ function createSampleSecureIncrementPayloads() {
     {
       name: "Retail Purchase",
       payload: {
+        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
         functionName: "secureIncrement",
         merchantType: "RETAIL",
         user: "0x1111111111111111111111111111111111111111",
@@ -149,6 +151,7 @@ function createSampleSecureIncrementPayloads() {
     {
       name: "Ride Share Extended",
       payload: {
+        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
         functionName: "secureIncrement",
         merchantType: "RIDE_SHARE",
         user: "0x3333333333333333333333333333333333333333",

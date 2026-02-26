@@ -92,7 +92,8 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         const transactionHistory: TransactionHistoryItem[] = getRecentTransactions(
             runtime,
             authorizePayload.user,
-            authorizePayload.merchant
+            authorizePayload.merchant,
+            "auth"
         );
 
         const historyString = transactionHistory.length > 0

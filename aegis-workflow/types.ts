@@ -55,6 +55,12 @@ export type Config = z.infer<typeof configSchema>;
 export type MerchantType = "EV_CHARGER" | "RETAIL" | "RIDE_SHARE";
 
 /**
+ * Query history types to control which collections to query.
+ * TODO: This was added to temporily deal with PerWorkflow.HTTPAction.CallLimit quota limit of 5 http calls. Might need to proxy requsets
+ */
+export type QueryHistoryType = "both" | "auth" | "risk";
+
+/**
  * Fraud detection context for authorization requests.
  */
 export interface FraudAssessmentDetails {

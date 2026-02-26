@@ -15,6 +15,7 @@ import type {
     FirestoreWriteResponse,
     FirestoreQueryResponse,
     SignupNewUserResponse,
+    QueryHistoryType,
 } from "./types";
 
 /*********************************
@@ -33,7 +34,8 @@ import type {
 export function getRecentTransactions(
     runtime: Runtime<Config>,
     userAddress: string,
-    merchantAddress: string
+    merchantAddress: string,
+    queryHistoryType: QueryHistoryType = "both"
 ): TransactionHistoryItem[] {
     try {
         const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
@@ -54,7 +56,7 @@ export function getRecentTransactions(
         const queryResult: TransactionHistoryItem[] = httpClient
             .sendRequest(
                 runtime,
-                queryHistory(tokenResult.idToken, firestoreProjectId.value, userAddress, merchantAddress),
+                queryHistory(tokenResult.idToken, firestoreProjectId.value, userAddress, merchantAddress, queryHistoryType),
                 consensusIdenticalAggregation<TransactionHistoryItem[]>()
             )(runtime.config)
             .result();
@@ -228,92 +230,97 @@ const postFirebaseIdToken =
  * @param projectId - Firebase project ID
  * @param userAddress - User wallet address to filter by
  * @param merchantAddress - Merchant wallet address to filter by
+ * @param queryType - Type of query: "both", "auth", or "risk"
  * @returns Function that performs the HTTP request and returns unified history array
  */
 const queryHistory =
-    (idToken: string, projectId: string, userAddress: string, merchantAddress: string) =>
+    (idToken: string, projectId: string, userAddress: string, merchantAddress: string, queryType: QueryHistoryType = "both") =>
         (sendRequester: HTTPSendRequester, config: Config): TransactionHistoryItem[] => {
             const history: TransactionHistoryItem[] = [];
 
-            try {
-                // Query authorization-logs collection
-                const authReq = {
-                    url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/authorization-logs?orderBy=createdAt%20desc&pageSize=10`,
-                    method: "GET" as const,
-                    headers: {
-                        Authorization: `Bearer ${idToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    cacheSettings: {
-                        readFromCache: false,
-                        maxAgeMs: 0,
-                    },
-                };
+            if (queryType === "both" || queryType === "auth") {
+                try {
+                    // Query authorization-logs collection
+                    const authReq = {
+                        url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/authorization-logs?orderBy=createdAt%20desc&pageSize=10`,
+                        method: "GET" as const,
+                        headers: {
+                            Authorization: `Bearer ${idToken}`,
+                            "Content-Type": "application/json",
+                        },
+                        cacheSettings: {
+                            readFromCache: false,
+                            maxAgeMs: 0,
+                        },
+                    };
 
-                const authResp = sendRequester.sendRequest(authReq).result();
-                if (ok(authResp)) {
-                    const authBodyText = new TextDecoder().decode(authResp.body);
-                    const authResponse = JSON.parse(authBodyText) as FirestoreQueryResponse;
+                    const authResp = sendRequester.sendRequest(authReq).result();
+                    if (ok(authResp)) {
+                        const authBodyText = new TextDecoder().decode(authResp.body);
+                        const authResponse = JSON.parse(authBodyText) as FirestoreQueryResponse;
 
-                    if (authResponse.documents) {
-                        authResponse.documents
-                            .filter(doc =>
-                                doc.fields.userAddress?.stringValue === userAddress &&
-                                doc.fields.merchantAddress?.stringValue === merchantAddress
-                            )
-                            .forEach(doc => {
-                                history.push({
-                                    amount: parseInt(doc.fields.amount?.integerValue || "0"),
-                                    timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
-                                    merchant: doc.fields.merchantAddress?.stringValue || "",
-                                    user: doc.fields.userAddress?.stringValue || "",
+                        if (authResponse.documents) {
+                            authResponse.documents
+                                .filter(doc =>
+                                    doc.fields.userAddress?.stringValue === userAddress &&
+                                    doc.fields.merchantAddress?.stringValue === merchantAddress
+                                )
+                                .forEach(doc => {
+                                    history.push({
+                                        amount: parseInt(doc.fields.amount?.integerValue || "0"),
+                                        timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
+                                        merchant: doc.fields.merchantAddress?.stringValue || "",
+                                        user: doc.fields.userAddress?.stringValue || "",
+                                    });
                                 });
-                            });
+                        }
                     }
+                } catch (e) {
+                    // Continue even if authorization-logs query fails
                 }
-            } catch (e) {
-                // Continue even if authorization-logs query fails
             }
 
-            try {
-                // Query risk-assessments collection
-                const riskReq = {
-                    url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/risk-assessments?orderBy=createdAt%20desc&pageSize=10`,
-                    method: "GET" as const,
-                    headers: {
-                        Authorization: `Bearer ${idToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    cacheSettings: {
-                        readFromCache: false,
-                        maxAgeMs: 0,
-                    },
-                };
+            if (queryType === "both" || queryType === "risk") {
+                try {
+                    // Query risk-assessments collection
+                    const riskReq = {
+                        url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/risk-assessments?orderBy=createdAt%20desc&pageSize=10`,
+                        method: "GET" as const,
+                        headers: {
+                            Authorization: `Bearer ${idToken}`,
+                            "Content-Type": "application/json",
+                        },
+                        cacheSettings: {
+                            readFromCache: false,
+                            maxAgeMs: 0,
+                        },
+                    };
 
-                const riskResp = sendRequester.sendRequest(riskReq).result();
-                if (ok(riskResp)) {
-                    const riskBodyText = new TextDecoder().decode(riskResp.body);
-                    const riskResponse = JSON.parse(riskBodyText) as FirestoreQueryResponse;
+                    const riskResp = sendRequester.sendRequest(riskReq).result();
+                    if (ok(riskResp)) {
+                        const riskBodyText = new TextDecoder().decode(riskResp.body);
+                        const riskResponse = JSON.parse(riskBodyText) as FirestoreQueryResponse;
 
-                    if (riskResponse.documents) {
-                        riskResponse.documents
-                            .filter(doc =>
-                                doc.fields.userAddress?.stringValue === userAddress &&
-                                doc.fields.merchantAddress?.stringValue === merchantAddress &&
-                                doc.fields.riskDecision?.stringValue === "YES" // Only approved increments
-                            )
-                            .forEach(doc => {
-                                history.push({
-                                    amount: parseInt(doc.fields.requestedTotal?.integerValue || "0"),
-                                    timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
-                                    merchant: doc.fields.merchantAddress?.stringValue || "",
-                                    user: doc.fields.userAddress?.stringValue || "",
+                        if (riskResponse.documents) {
+                            riskResponse.documents
+                                .filter(doc =>
+                                    doc.fields.userAddress?.stringValue === userAddress &&
+                                    doc.fields.merchantAddress?.stringValue === merchantAddress &&
+                                    doc.fields.riskDecision?.stringValue === "YES" // Only approved increments
+                                )
+                                .forEach(doc => {
+                                    history.push({
+                                        amount: parseInt(doc.fields.requestedTotal?.integerValue || "0"),
+                                        timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
+                                        merchant: doc.fields.merchantAddress?.stringValue || "",
+                                        user: doc.fields.userAddress?.stringValue || "",
+                                    });
                                 });
-                            });
+                        }
                     }
+                } catch (e) {
+                    // Continue even if risk-assessments query fails
                 }
-            } catch (e) {
-                // Continue even if risk-assessments query fails
             }
 
             // Sort by timestamp descending and limit to 10 most recent
