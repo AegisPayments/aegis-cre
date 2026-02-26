@@ -1,8 +1,0 @@
-{
-    "functionName": "authorize",
-    "user": "0x123...",
-    "merchant": "0x456...",
-    "amount": 100,
-    "nonce": 1,
-    "signature": "0xabc123..."
-}
