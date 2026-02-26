@@ -1,9 +1,9 @@
 {
     "llm": {
-        "provider": "openai",
-        "model": "gpt-4o",
-        "apiUrl": "https://api.openai.com/v1/chat/completions",
-        "apiKeyId": "OPENAI_API_KEY"
+        "provider": "gemini",
+        "model": "gemini-2.5-flash",
+        "apiUrl": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "apiKeyId": "GEMINI_API_KEY"
     },
     "evmConfigs": [
         {

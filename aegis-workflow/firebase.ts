@@ -182,6 +182,7 @@ export function writeAuthorizeLog(
 
         return writeResult;
     } catch (error) {
+        runtime.log(`Error writing authorize log: ${error}`);
         // Handle simulation mode or missing secrets with mock response
         runtime.log("[SIMULATION] Using mock Firestore write response for authorize log");
         const now = Date.now();
@@ -219,8 +220,10 @@ const postFirebaseIdToken =
                     "Content-Type": "application/json",
                 },
                 cacheSettings: {
-                    store: true,
-                    maxAge: "60s",
+                    // store: true,
+                    // maxAge: "60s",
+                    readFromCache: true,
+                    maxAgeMs: 60_000,
                 },
             };
 
@@ -256,8 +259,10 @@ const queryTransactionHistory =
                     "Content-Type": "application/json",
                 },
                 cacheSettings: {
-                    store: false, // Always fetch fresh transaction data
-                    maxAge: "0s",
+                    // store: false, // Always fetch fresh transaction data
+                    // maxAge: "0s",
+                    readFromCache: false,
+                    maxAgeMs: 0,
                 },
             };
 
@@ -339,8 +344,10 @@ const postRiskAssessmentLog =
                     "Content-Type": "application/json",
                 },
                 cacheSettings: {
-                    store: true,
-                    maxAge: "60s",
+                    // store: true,
+                    // maxAge: "60s",
+                    readFromCache: true,
+                    maxAgeMs: 60_000,
                 },
             };
 
@@ -396,8 +403,10 @@ const postAuthorizeLog =
                     "Content-Type": "application/json",
                 },
                 cacheSettings: {
-                    store: true,
-                    maxAge: "60s",
+                    // store: true,
+                    // maxAge: "60s",
+                    readFromCache: true,
+                    maxAgeMs: 60_000,
                 },
             };
 

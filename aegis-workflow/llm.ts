@@ -222,6 +222,7 @@ export const assessPaymentRisk = (runtime: Runtime<Config>, details: RiskAssessm
     try {
         // API key for the outbound LLM request (stored in CRE secrets)
         const apiKey = runtime.getSecret({ id: runtime.config.llm.apiKeyId }).result();
+        // runtime.log(`API KEY for LLM request retrieved successfully: ${apiKey.value.substring(0, 4)}...`);
 
         // Build the complete system prompt with merchant-specific rules
         const systemPrompt = riskAssessmentSystemPrompt + getMerchantSpecificRules(details.merchantType);
@@ -245,6 +246,7 @@ export const assessPaymentRisk = (runtime: Runtime<Config>, details: RiskAssessm
 
         return result;
     } catch (error) {
+        runtime.log(`ERROR during LLM ${error}`)
         // Handle simulation mode or missing secrets with mock AI decision
         runtime.log("[SIMULATION] Using mock AI risk assessment");
 
@@ -309,6 +311,7 @@ export const assessFraudRisk = (runtime: Runtime<Config>, details: FraudAssessme
     try {
         // API key for the outbound LLM request (stored in CRE secrets)
         const apiKey = runtime.getSecret({ id: runtime.config.llm.apiKeyId }).result();
+        // runtime.log(`API KEY for LLM request retrieved successfully: ${apiKey.value.substring(0, 4)}...`);
 
         const systemPrompt = fraudDetectionSystemPrompt;
         const userPrompt = buildFraudDetectionUserPrompt(details);
@@ -330,6 +333,7 @@ export const assessFraudRisk = (runtime: Runtime<Config>, details: FraudAssessme
 
         return result;
     } catch (error) {
+        runtime.log(`ERROR during LLM ${error}`)
         // Handle simulation mode or missing secrets with mock AI decision
         runtime.log("[SIMULATION] Using mock AI fraud assessment");
 
@@ -449,8 +453,10 @@ function postGeminiRequest(
             "x-goog-api-key": apiKey,
         },
         cacheSettings: {
-            store: true,
-            maxAge: "60s",
+            // store: true,
+            // maxAge: "60s",
+            readFromCache: true,
+            maxAgeMs: 60_000,
         },
     };
 
@@ -511,8 +517,10 @@ function postGeminiFraudRequest(
             "x-goog-api-key": apiKey,
         },
         cacheSettings: {
-            store: true,
-            maxAge: "60s",
+            // store: true,
+            // maxAge: "60s",
+            readFromCache: true,
+            maxAgeMs: 60_000,
         },
     };
 
@@ -577,8 +585,10 @@ function postOpenAIRequest(
             "Authorization": `Bearer ${apiKey}`,
         },
         cacheSettings: {
-            store: true,
-            maxAge: "60s",
+            // store: true,
+            // maxAge: "60s",
+            readFromCache: true,
+            maxAgeMs: 60_000,
         },
     };
 
@@ -643,8 +653,10 @@ function postOpenAIFraudRequest(
             "Authorization": `Bearer ${apiKey}`,
         },
         cacheSettings: {
-            store: true,
-            maxAge: "60s",
+            // store: true,
+            // maxAge: "60s",
+            readFromCache: true,
+            maxAgeMs: 60_000,
         },
     };
 
