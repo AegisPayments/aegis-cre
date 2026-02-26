@@ -15,6 +15,7 @@ const CONFIG = {
   // Test private key (DO NOT USE IN PRODUCTION)
   PRIVATE_KEY:
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  // PUBLIC KEY DERIVED FROMTHIS - 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
   // Contract configuration (update these to match your deployment)
   CONTRACT_ADDRESS: "0xc6587f0f0BD7DfD2cB0340f4Ce564721C5149f73", // Replace with actual contract address
