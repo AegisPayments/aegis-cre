@@ -4,3 +4,6 @@
 export { onHttpTrigger } from "./http-callback/http-callback";
 export { handleSecureIncrement } from "./http-callback/secure-increment";
 export { handleAuthorize } from "./http-callback/authorize";
+
+// Export log callback handlers
+export { onCapturedLog, onFundsReleasedLog } from "./log-callbacks";

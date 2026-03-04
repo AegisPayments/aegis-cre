@@ -107,6 +107,30 @@ export interface AuthorizePayload extends BasePayload {
 }
 
 /**
+ * Log event data for Captured event.
+ */
+export interface CapturedEventLog {
+    user: string; // User wallet address (0x...)
+    merchant: string; // Merchant wallet address (0x...)
+    amount: bigint; // Amount captured (as bigint from event)
+    blockNumber: number;
+    transactionHash: string;
+    logIndex: number;
+}
+
+/**
+ * Log event data for FundsReleased event.
+ */
+export interface FundsReleasedEventLog {
+    user: string; // User wallet address (0x...)
+    merchant: string; // Merchant wallet address (0x...)
+    amount: bigint; // Amount released (as bigint from event)
+    blockNumber: number;
+    transactionHash: string;
+    logIndex: number;
+}
+
+/**
  * Transaction history item for risk assessment context.
  */
 export interface TransactionHistoryItem {
@@ -385,6 +409,72 @@ export interface FirestoreAuthorizeLogData {
         };
         functionName: {
             stringValue: string;
+        };
+        createdAt: {
+            integerValue: number;
+        };
+    };
+}
+
+/**
+ * Firestore document write payload structure for captured funds logs.
+ * All fields must follow Firestore's typed field format.
+ */
+export interface FirestoreCapturedLogData {
+    fields: {
+        userAddress: {
+            stringValue: string;
+        };
+        merchantAddress: {
+            stringValue: string;
+        };
+        amount: {
+            integerValue: number;
+        };
+        txHash: {
+            stringValue: string;
+        };
+        blockNumber: {
+            integerValue: number;
+        };
+        transactionHash: {
+            stringValue: string;
+        };
+        logIndex: {
+            integerValue: number;
+        };
+        createdAt: {
+            integerValue: number;
+        };
+    };
+}
+
+/**
+ * Firestore document write payload structure for funds released logs.
+ * All fields must follow Firestore's typed field format.
+ */
+export interface FirestoreFundsReleasedLogData {
+    fields: {
+        userAddress: {
+            stringValue: string;
+        };
+        merchantAddress: {
+            stringValue: string;
+        };
+        amount: {
+            integerValue: number;
+        };
+        txHash: {
+            stringValue: string;
+        };
+        blockNumber: {
+            integerValue: number;
+        };
+        transactionHash: {
+            stringValue: string;
+        };
+        logIndex: {
+            integerValue: number;
         };
         createdAt: {
             integerValue: number;

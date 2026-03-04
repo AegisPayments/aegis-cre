@@ -12,10 +12,14 @@ import type {
     LLMResponse,
     FirestoreRiskLogData,
     FirestoreAuthorizeLogData,
+    FirestoreCapturedLogData,
+    FirestoreFundsReleasedLogData,
     FirestoreWriteResponse,
     FirestoreQueryResponse,
     SignupNewUserResponse,
     QueryHistoryType,
+    CapturedEventLog,
+    FundsReleasedEventLog,
 } from "./types";
 
 /*********************************
@@ -174,6 +178,108 @@ export function writeAuthorizeLog(
         const now = Date.now();
         return {
             name: `projects/mock-project/databases/(default)/documents/authorization-logs/${now}_${payload.user.slice(-8)}`,
+            fields: {},
+            createTime: new Date(now).toISOString(),
+            updateTime: new Date(now).toISOString(),
+        };
+    }
+}
+
+/**
+ * Writes captured funds log to Firestore for audit trail.
+ * Records the captured event details from the Captured event log.
+ *
+ * @param runtime - CRE runtime instance with config and secrets
+ * @param eventLog - Captured event log data from the EVM log
+ * @returns Firestore write response with document metadata
+ */
+export function writeCapturedLog(
+    runtime: Runtime<Config>,
+    eventLog: CapturedEventLog
+): FirestoreWriteResponse {
+    try {
+        const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
+        const firestoreProjectId = runtime.getSecret({ id: "FIREBASE_PROJECT_ID" }).result();
+
+        const httpClient = new cre.capabilities.HTTPClient();
+
+        // Obtain an ID token via Firebase anonymous authentication
+        const tokenResult: SignupNewUserResponse = httpClient
+            .sendRequest(
+                runtime,
+                postFirebaseIdToken(firestoreApiKey.value),
+                consensusIdenticalAggregation<SignupNewUserResponse>()
+            )(runtime.config)
+            .result();
+
+        // Write captured log to Firestore
+        const writeResult: FirestoreWriteResponse = httpClient
+            .sendRequest(
+                runtime,
+                postCapturedLog(tokenResult.idToken, firestoreProjectId.value, eventLog),
+                consensusIdenticalAggregation<FirestoreWriteResponse>()
+            )(runtime.config)
+            .result();
+
+        return writeResult;
+    } catch (error) {
+        runtime.log(`Error writing captured log: ${error}`);
+        // Handle simulation mode or missing secrets with mock response
+        runtime.log("[SIMULATION] Using mock Firestore write response for captured log");
+        const now = Date.now();
+        return {
+            name: `projects/mock-project/databases/(default)/documents/captured-logs/${now}_${eventLog.user.slice(-8)}`,
+            fields: {},
+            createTime: new Date(now).toISOString(),
+            updateTime: new Date(now).toISOString(),
+        };
+    }
+}
+
+/**
+ * Writes funds released log to Firestore for audit trail.
+ * Records the funds released event details from the FundsReleased event log.
+ *
+ * @param runtime - CRE runtime instance with config and secrets
+ * @param eventLog - FundsReleased event log data from the EVM log
+ * @returns Firestore write response with document metadata
+ */
+export function writeFundsReleasedLog(
+    runtime: Runtime<Config>,
+    eventLog: FundsReleasedEventLog
+): FirestoreWriteResponse {
+    try {
+        const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
+        const firestoreProjectId = runtime.getSecret({ id: "FIREBASE_PROJECT_ID" }).result();
+
+        const httpClient = new cre.capabilities.HTTPClient();
+
+        // Obtain an ID token via Firebase anonymous authentication
+        const tokenResult: SignupNewUserResponse = httpClient
+            .sendRequest(
+                runtime,
+                postFirebaseIdToken(firestoreApiKey.value),
+                consensusIdenticalAggregation<SignupNewUserResponse>()
+            )(runtime.config)
+            .result();
+
+        // Write funds released log to Firestore
+        const writeResult: FirestoreWriteResponse = httpClient
+            .sendRequest(
+                runtime,
+                postFundsReleasedLog(tokenResult.idToken, firestoreProjectId.value, eventLog),
+                consensusIdenticalAggregation<FirestoreWriteResponse>()
+            )(runtime.config)
+            .result();
+
+        return writeResult;
+    } catch (error) {
+        runtime.log(`Error writing funds released log: ${error}`);
+        // Handle simulation mode or missing secrets with mock response
+        runtime.log("[SIMULATION] Using mock Firestore write response for funds released log");
+        const now = Date.now();
+        return {
+            name: `projects/mock-project/databases/(default)/documents/funds-released-logs/${now}_${eventLog.user.slice(-8)}`,
             fields: {},
             createTime: new Date(now).toISOString(),
             updateTime: new Date(now).toISOString(),
@@ -452,6 +558,116 @@ const postAuthorizeLog =
                 cacheSettings: {
                     // store: true,
                     // maxAge: "60s",
+                    readFromCache: true,
+                    maxAgeMs: 60_000,
+                },
+            };
+
+            const resp = sendRequester.sendRequest(req).result();
+            if (!ok(resp)) throw new Error(`HTTP request failed with status: ${resp.statusCode}`);
+
+            const bodyText = new TextDecoder().decode(resp.body);
+            const externalResp = JSON.parse(bodyText) as FirestoreWriteResponse;
+
+            return externalResp;
+        };/**
+ * Writes a captured funds log document to Firestore.
+ * Uses a combination of timestamp and user address for document ID uniqueness.
+ *
+ * @param idToken - Firebase authentication token
+ * @param projectId - Firebase project ID
+ * @param eventLog - Captured event log data from EVM log
+ * @returns Function that performs the HTTP request and returns the Firestore response
+ */
+const postCapturedLog =
+    (idToken: string, projectId: string, eventLog: CapturedEventLog) =>
+        (sendRequester: HTTPSendRequester, config: Config): FirestoreWriteResponse => {
+            const now = Date.now();
+
+            const dataToSend: FirestoreCapturedLogData = {
+                fields: {
+                    userAddress: { stringValue: eventLog.user },
+                    merchantAddress: { stringValue: eventLog.merchant },
+                    amount: { integerValue: Number(eventLog.amount) },
+                    txHash: { stringValue: eventLog.transactionHash },
+                    blockNumber: { integerValue: eventLog.blockNumber },
+                    transactionHash: { stringValue: eventLog.transactionHash },
+                    logIndex: { integerValue: eventLog.logIndex },
+                    createdAt: { integerValue: now },
+                },
+            };
+
+            const bodyBytes = new TextEncoder().encode(JSON.stringify(dataToSend));
+            const body = Buffer.from(bodyBytes).toString("base64");
+
+            // Use timestamp + user address hash for unique document ID
+            const documentId = `${now}_${eventLog.user.slice(-8)}`;
+
+            const req = {
+                url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/captured-logs/?documentId=${documentId}`,
+                method: "POST" as const,
+                body: body,
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                cacheSettings: {
+                    readFromCache: true,
+                    maxAgeMs: 60_000,
+                },
+            };
+
+            const resp = sendRequester.sendRequest(req).result();
+            if (!ok(resp)) throw new Error(`HTTP request failed with status: ${resp.statusCode}`);
+
+            const bodyText = new TextDecoder().decode(resp.body);
+            const externalResp = JSON.parse(bodyText) as FirestoreWriteResponse;
+
+            return externalResp;
+        };
+
+/**
+ * Writes a funds released log document to Firestore.
+ * Uses a combination of timestamp and user address for document ID uniqueness.
+ *
+ * @param idToken - Firebase authentication token
+ * @param projectId - Firebase project ID
+ * @param eventLog - FundsReleased event log data from EVM log
+ * @returns Function that performs the HTTP request and returns the Firestore response
+ */
+const postFundsReleasedLog =
+    (idToken: string, projectId: string, eventLog: FundsReleasedEventLog) =>
+        (sendRequester: HTTPSendRequester, config: Config): FirestoreWriteResponse => {
+            const now = Date.now();
+
+            const dataToSend: FirestoreFundsReleasedLogData = {
+                fields: {
+                    userAddress: { stringValue: eventLog.user },
+                    merchantAddress: { stringValue: eventLog.merchant },
+                    amount: { integerValue: Number(eventLog.amount) },
+                    txHash: { stringValue: eventLog.transactionHash },
+                    blockNumber: { integerValue: eventLog.blockNumber },
+                    transactionHash: { stringValue: eventLog.transactionHash },
+                    logIndex: { integerValue: eventLog.logIndex },
+                    createdAt: { integerValue: now },
+                },
+            };
+
+            const bodyBytes = new TextEncoder().encode(JSON.stringify(dataToSend));
+            const body = Buffer.from(bodyBytes).toString("base64");
+
+            // Use timestamp + user address hash for unique document ID
+            const documentId = `${now}_${eventLog.user.slice(-8)}`;
+
+            const req = {
+                url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/funds-released-logs/?documentId=${documentId}`,
+                method: "POST" as const,
+                body: body,
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                cacheSettings: {
                     readFromCache: true,
                     maxAgeMs: 60_000,
                 },
