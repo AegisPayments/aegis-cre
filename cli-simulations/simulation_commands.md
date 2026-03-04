@@ -3,6 +3,23 @@
 - Add `--broadcast` flag to simulate and write the transaction onchain
 - Add `--engine-logs` flag to output detailed engine logs for debugging
 
+## Generate EIP-712 Signatures
+
+Use the minimal signature generator to create signatures for authorize payloads:
+
+```bash
+# Generate signature from file
+node sig-gen-minimal.js test-payload.json
+
+# Generate signature from stdin
+cat test-payload.json | node sig-gen-minimal.js
+
+# Example output
+0xb1bf4b94003346c217da6082fdd956bade14d2af17c72f43c8336d3ee1e4b8787fffddc0d0d6ff53bb33c8df36b2131956901ca818d7ea02aa37d6c0e32c363d1b
+```
+
+The input JSON should contain: `user`, `merchant`, `amount`, and `nonce` fields.
+
 ## Non-interactive (recommended for testing scripts)
 
 ```bash
@@ -20,7 +37,6 @@ cre workflow simulate ./aegis-workflow
 - Use `--http-payload '...'` with inline JSON (not file paths) due to CRE CLI bug
 - Always include `--target local-simulation --non-interactive --trigger-index 0` for automated testing
 - Additional Test payloads are located in `testing/payloads/` directory
-
 
 ## Funds Captured Log Trigger Simulation
 
@@ -48,4 +64,3 @@ cre workflow simulate aegis-workflow \
 
 1. --trigger-index selects which handler in your workflow to run (e.g., if the handler with an EVM log trigger is the third handler defined, use --trigger-index 2)
 2. --evm-event-index specifies which log/event within the transaction to use for testing (e.g., if the transaction emitted 3 events and you want the first one, use --evm-event-index 0)
-
