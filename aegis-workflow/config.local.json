@@ -8,7 +8,7 @@
     "evmConfigs": [
         {
             "chainSelectorName": "ethereum-testnet-sepolia",
-            "contractAddress": "0x30E0B298b428B9895dD6C65dc66277371610Dfe7",
+            "contractAddress": "0xfb610bb9c3117b4f8d90e8da37e9b11dfb59486a",
             "gasLimit": "2000000"
         }
     ]

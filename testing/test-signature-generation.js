@@ -18,18 +18,18 @@ dotenv.config();
 const CONFIG = {
   // Test private key (DO NOT USE IN PRODUCTION)
   PRIVATE_KEY:
-  //   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  // PUBLIC KEY DERIVED FROMTHIS - 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-  process.env.DEV_WALLET_PRIVATE_KEY, // * Using the dev wallet 0x9F77cBDb561aaD32b403695306e3eea53F9B40e7 instead of a randomly generated one.
+    //   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    // PUBLIC KEY DERIVED FROMTHIS - 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    process.env.DEV_WALLET_PRIVATE_KEY, // * Using the dev wallet 0x9F77cBDb561aaD32b403695306e3eea53F9B40e7 instead of a randomly generated one.
 
   // Contract configuration (update these to match your deployment)
-  CONTRACT_ADDRESS: "0x30E0B298b428B9895dD6C65dc66277371610Dfe7", // Replace with actual contract address
+  CONTRACT_ADDRESS: "0xfb610bb9c3117b4f8d90e8da37e9b11dfb59486a", // Replace with actual contract address
   CHAIN_ID: 11155111, // Sepolia testnet
   CONTRACT_NAME: "AegisProtocol",
   CONTRACT_VERSION: "1",
 
   // Test scenarios
-  TEST_SCENARIOS: sigGenSamples
+  TEST_SCENARIOS: sigGenSamples,
 };
 
 /**
