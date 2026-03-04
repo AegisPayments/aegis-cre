@@ -8,21 +8,24 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { secureIncrementSamples } from "./payloads/samples/secure-increment-samples.js";
 
 // Configuration
 const CONFIG = {
   CRE_WORKFLOW_PATH: "/home/kal/my_projects/aegispay/aegis-cre/aegis-workflow",
   PAYLOADS_DIR: "./payloads/samples",
+  GENERATIONS_DIR: "./payloads/generated",
   TEST_TIMEOUT: 30000, // 30 seconds
 };
 
 /**
  * Run CRE workflow simulation with a specific payload
  */
-function runCRESimulation(payloadPath) {
+function runCRESimulation(payloadPath, shouldBroadcast = false) {
   return new Promise((resolve, reject) => {
     console.log(
       `🚀 Running CRE simulation with payload: ${path.basename(payloadPath)}`,
+      `${shouldBroadcast ? "(with broadcast)" : "(simulation only)"}`,
     );
 
     // Read payload file and pass as inline JSON
@@ -38,6 +41,11 @@ function runCRESimulation(payloadPath) {
       "--trigger-index",
       "0",
     ];
+
+    // Only add broadcast flag if requested
+    if (shouldBroadcast) {
+      args.push("--broadcast");
+    }
 
     console.log(`   Command: cre ${args.join(" ")}`);
 
@@ -111,57 +119,45 @@ function findSecureIncrementPayloads() {
 }
 
 /**
+ * Parse command line arguments for broadcast flag
+ */
+function parseCommandLineArgs() {
+  const args = process.argv.slice(2);
+
+  // Check for help flag
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(`
+🤖 CRE Workflow Test Runner for SecureIncrement Function
+${"".repeat(60)}
+
+Usage:
+  node test-secure-increment-workflow.js [--broadcast]
+
+Options:
+  --broadcast     Enable broadcasting of transactions
+  --help          Show this help message
+`);
+    process.exit(0);
+  }
+
+  // Check for broadcast flag
+  const shouldBroadcast = args.includes("--broadcast");
+
+  return { shouldBroadcast };
+}
+
+/**
  * Create sample secureIncrement payloads if none exist
  */
 function createSampleSecureIncrementPayloads() {
-  const payloadsDir = path.resolve(CONFIG.PAYLOADS_DIR);
+  const payloadsDir = path.resolve(CONFIG.GENERATIONS_DIR);
 
   // Ensure directory exists
   if (!fs.existsSync(payloadsDir)) {
     fs.mkdirSync(payloadsDir, { recursive: true });
   }
 
-  const samplePayloads = [
-    {
-      name: "EV Charger Basic",
-      payload: {
-        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
-        functionName: "secureIncrement",
-        merchantType: "EV_CHARGER",
-        user: "0x1234567890123456789012345678901234567890",
-        merchant: "0x0987654321098765432109876543210987654321",
-        currentAuth: 50,
-        requestedTotal: 75,
-        reason: "Additional charging time needed",
-      },
-    },
-    {
-      name: "Retail Purchase",
-      payload: {
-        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
-        functionName: "secureIncrement",
-        merchantType: "RETAIL",
-        user: "0x1111111111111111111111111111111111111111",
-        merchant: "0x2222222222222222222222222222222222222222",
-        currentAuth: 25,
-        requestedTotal: 40,
-        reason: "Added items to cart",
-      },
-    },
-    {
-      name: "Ride Share Extended",
-      payload: {
-        authorizationLogId: "1772076522483_62266", // TODO: This is a fake authoirzationLogId. need to fetch real ones associcted with currentAuth and set it
-        functionName: "secureIncrement",
-        merchantType: "RIDE_SHARE",
-        user: "0x3333333333333333333333333333333333333333",
-        merchant: "0x4444444444444444444444444444444444444444",
-        currentAuth: 15,
-        requestedTotal: 35,
-        reason: "Extended trip due to traffic",
-      },
-    },
-  ];
+  const samplePayloads = secureIncrementSamples;
 
   const createdFiles = [];
 
@@ -255,6 +251,13 @@ async function main() {
   console.log("🤖 Starting SecureIncrement Workflow Tests");
   console.log("=".repeat(60));
 
+  // Parse command line arguments
+  const { shouldBroadcast } = parseCommandLineArgs();
+
+  if (shouldBroadcast) {
+    console.log(`📡 Broadcasting enabled`);
+  }
+
   let payloadFiles = findSecureIncrementPayloads();
 
   if (payloadFiles.length === 0) {
@@ -278,7 +281,7 @@ async function main() {
     console.log("=".repeat(60));
 
     try {
-      const result = await runCRESimulation(payloadPath);
+      const result = await runCRESimulation(payloadPath, shouldBroadcast);
       analyzeTestResult(payloadPath, result);
       passed++;
     } catch (error) {

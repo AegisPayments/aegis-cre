@@ -11,7 +11,10 @@
         "test:authandinc": "npm run test:authorize && npm run test:secure-increment"
     },
     "devDependencies": {
-        "ethers": "^6.8.0",
-        "@types/node": "^20.0.0"
+        "@types/node": "^20.0.0",
+        "ethers": "^6.8.0"
+    },
+    "dependencies": {
+        "dotenv": "^17.3.1"
     }
 }

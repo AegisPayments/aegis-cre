@@ -29,9 +29,15 @@ npm install
 ### 2. **Run Complete Test Suite**
 
 ```bash
+# Run all tests (simulation mode - no broadcasting)
 npm run test:all
 # or
 node run-all-tests.js
+
+# Run all tests with broadcasting enabled
+npm run test:all -- --broadcast
+# or
+node run-all-tests.js --broadcast
 ```
 
 This will:
@@ -47,14 +53,56 @@ This will:
 # Generate signatures only
 npm run test:signatures
 
-# Test authorize workflow only
+# Test authorize workflow only (simulation mode)
 npm run test:authorize
 
-# Test secureIncrement workflow only
+# Test authorize workflow with broadcasting
+npm run test:authorize -- --broadcast
+
+# Test secureIncrement workflow only (simulation mode)
 npm run test:secure-increment
+
+# Test secureIncrement workflow with broadcasting
+npm run test:secure-increment -- --broadcast
 ```
 
-## 📋 **Test Scripts**
+## � **Broadcasting vs Simulation Mode**
+
+### **Simulation Mode (Default)**
+
+The tests run in simulation mode by default, which:
+
+- ✅ Validates all logic and AI processing
+- ✅ Tests signature verification
+- ✅ Runs risk assessment algorithms
+- ❌ Does NOT broadcast transactions to blockchain
+- 💡 Safe for development and testing
+
+### **Broadcasting Mode**
+
+When `--broadcast` flag is used:
+
+- ✅ All simulation mode features
+- ✅ **Actually broadcasts transactions to blockchain**
+- ⚠️ **Uses real gas fees**
+- ⚠️ **Creates real on-chain state changes**
+- 🚨 **Only use on test networks**
+
+### **Usage Examples**
+
+```bash
+# Safe simulation testing
+npm run test:all
+
+# Real blockchain transactions (test network only!)
+npm run test:all -- --broadcast
+
+# Individual tests with broadcasting
+npm run test:authorize -- --broadcast
+npm run test:secure-increment -- --broadcast
+```
+
+## �📋 **Test Scripts**
 
 ### **test-signature-generation.js**
 
@@ -90,6 +138,8 @@ Tests the authorize function through CRE workflow simulation.
 - 🚀 CRE workflow simulation execution
 - 📊 Detailed result analysis
 - ⏱️ Timeout handling
+- 🎯 Broadcasting control via `--broadcast` flag
+- 📁 File filtering support: `--files file1.json file2.json`
 
 ### **test-secure-increment-workflow.js**
 
@@ -101,6 +151,8 @@ Tests the secureIncrement function with AI risk assessment.
 - 📈 Transaction history simulation
 - 🎯 Decision analysis
 - 📝 Comprehensive logging
+- 🚀 Broadcasting control via `--broadcast` flag
+- 🔄 Automatic sample payload generation
 
 ### **run-all-tests.js**
 
@@ -112,6 +164,8 @@ Master orchestrator for the complete test suite.
 - 📊 Comprehensive reporting
 - ⏱️ Performance tracking
 - 📄 Multiple report formats (JSON & Markdown)
+- 📡 Broadcasting control via `--broadcast` flag
+- 🎛️ Command line argument parsing
 
 ## 📄 **Payload Formats**
 

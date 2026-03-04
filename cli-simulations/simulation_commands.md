@@ -1,5 +1,7 @@
 # CRE Simulation Commands
 
+- Add `--broadcast` flag to simulate and write the transaction onchain
+
 ## Non-interactive (recommended for testing scripts)
 
 ```bash

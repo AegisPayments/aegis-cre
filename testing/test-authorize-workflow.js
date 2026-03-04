@@ -8,6 +8,7 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { authorizeSample } from "./payloads/samples/authorize-sample.js";
 
 // Configuration
 const CONFIG = {
@@ -19,10 +20,11 @@ const CONFIG = {
 /**
  * Run CRE workflow simulation with a specific payload
  */
-function runCRESimulation(payloadPath) {
+function runCRESimulation(payloadPath, shouldBroadcast = false) {
   return new Promise((resolve, reject) => {
     console.log(
       `🚀 Running CRE simulation with payload: ${path.basename(payloadPath)}`,
+      `${shouldBroadcast ? "(with broadcast)" : "(simulation only)"}`
     );
 
     // Read payload file and pass as inline JSON
@@ -40,6 +42,11 @@ function runCRESimulation(payloadPath) {
       "--trigger-index",
       "0",
     ];
+
+    // Only add broadcast flag if requested
+    if (shouldBroadcast) {
+      args.push("--broadcast");
+    }
 
     console.log(`   Command: cre ${args.join(" ")}`);
 
@@ -128,15 +135,7 @@ function createSampleAuthorizePayload() {
     fs.mkdirSync(payloadsDir, { recursive: true });
   }
 
-  const samplePayload = {
-    functionName: "authorize",
-    user: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    merchant: "0x0987654321098765432109876543210987654321",
-    amount: 100,
-    nonce: 1,
-    signature:
-      "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  };
+  const samplePayload = authorizeSample;
 
   const samplePath = path.join(payloadsDir, "authorize-sample.json");
   fs.writeFileSync(samplePath, JSON.stringify(samplePayload, null, 2));
@@ -229,7 +228,7 @@ Options:
 }
 
 /**
- * Parse command line arguments for file filtering
+ * Parse command line arguments for file filtering and broadcast flag
  */
 function parseCommandLineArgs() {
   const args = process.argv.slice(2);
@@ -240,20 +239,27 @@ function parseCommandLineArgs() {
     process.exit(0);
   }
 
+  // Check for broadcast flag
+  const shouldBroadcast = args.includes("--broadcast");
+
+  // Filter out flags to get file filters
   const fileFilters = [];
+  const filteredArgs = args.filter((arg) => !arg.startsWith("--"));
 
   // Check for --files flag
   const filesIndex = args.indexOf("--files");
   if (filesIndex !== -1) {
-    // Get all arguments after --files
-    const filesArgs = args.slice(filesIndex + 1);
+    // Get all arguments after --files (excluding other flags)
+    const filesArgs = args
+      .slice(filesIndex + 1)
+      .filter((arg) => !arg.startsWith("--"));
     fileFilters.push(...filesArgs);
   } else {
-    // If no --files flag, treat all arguments as file names
-    fileFilters.push(...args);
+    // If no --files flag, treat non-flag arguments as file names
+    fileFilters.push(...filteredArgs);
   }
 
-  return fileFilters;
+  return { fileFilters, shouldBroadcast };
 }
 
 /**
@@ -264,10 +270,14 @@ async function main() {
   console.log("=".repeat(60));
 
   // Parse command line arguments
-  const fileFilters = parseCommandLineArgs();
+  const { fileFilters, shouldBroadcast } = parseCommandLineArgs();
 
   if (fileFilters.length > 0) {
     console.log(`🎯 Filtering for specific files: ${fileFilters.join(", ")}`);
+  }
+
+  if (shouldBroadcast) {
+    console.log(`📡 Broadcasting enabled`);
   }
 
   let payloadFiles = findAuthorizePayloads(fileFilters);
@@ -308,7 +318,7 @@ async function main() {
     console.log("=".repeat(60));
 
     try {
-      const result = await runCRESimulation(payloadPath);
+      const result = await runCRESimulation(payloadPath, shouldBroadcast);
       analyzeTestResult(payloadPath, result);
       passed++;
     } catch (error) {

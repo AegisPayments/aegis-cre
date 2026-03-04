@@ -26,14 +26,20 @@ const CONFIG = {
 /**
  * Run a Node.js script and capture output
  */
-function runScript(scriptPath, scriptName) {
+function runScript(scriptPath, scriptName, shouldBroadcast = false) {
   return new Promise((resolve, reject) => {
     console.log(`🚀 Running ${scriptName}...`);
     console.log(`   Script: ${scriptPath}`);
 
     const startTime = Date.now();
 
-    const nodeProcess = spawn("node", [scriptPath], {
+    const args = [scriptPath];
+    if (shouldBroadcast) {
+      args.push("--broadcast");
+      console.log(`   📡 Broadcasting enabled for ${scriptName}`);
+    }
+
+    const nodeProcess = spawn("node", args, {
       stdio: ["pipe", "pipe", "pipe"],
       cwd: process.cwd(),
     });
@@ -194,6 +200,35 @@ function generateTestReport(results) {
 }
 
 /**
+ * Parse command line arguments
+ */
+function parseCommandLineArgs() {
+  const args = process.argv.slice(2);
+
+  // Check for help flag
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(`
+🧪 Aegis CRE Workflow - Master Test Runner
+${"".repeat(60)}
+
+Usage:
+  node run-all-tests.js [--broadcast]
+  npm run test:all [-- --broadcast]
+
+Options:
+  --broadcast     Enable broadcasting of transactions in all tests
+  --help          Show this help message
+`);
+    process.exit(0);
+  }
+
+  // Check for broadcast flag
+  const shouldBroadcast = args.includes("--broadcast");
+
+  return { shouldBroadcast };
+}
+
+/**
  * Main test orchestration
  */
 async function main() {
@@ -205,6 +240,13 @@ async function main() {
   console.log("3. 🤖 Test secureIncrement workflow");
   console.log("4. 📄 Generate comprehensive test report");
   console.log("=".repeat(60));
+
+  // Parse command line arguments
+  const { shouldBroadcast } = parseCommandLineArgs();
+
+  if (shouldBroadcast) {
+    console.log(`📡 Broadcasting enabled for all tests`);
+  }
 
   try {
     // Check prerequisites
@@ -245,6 +287,7 @@ async function main() {
       const authResult = await runScript(
         CONFIG.TEST_SCRIPTS.authorize,
         "Authorize Workflow",
+        shouldBroadcast,
       );
       results.push(authResult);
     } catch (error) {
@@ -267,6 +310,7 @@ async function main() {
       const secureResult = await runScript(
         CONFIG.TEST_SCRIPTS.secureIncrement,
         "SecureIncrement Workflow",
+        shouldBroadcast,
       );
       results.push(secureResult);
     } catch (error) {
