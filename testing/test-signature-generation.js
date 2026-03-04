@@ -18,7 +18,7 @@ const CONFIG = {
   // PUBLIC KEY DERIVED FROMTHIS - 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
   // Contract configuration (update these to match your deployment)
-  CONTRACT_ADDRESS: "0xc6587f0f0BD7DfD2cB0340f4Ce564721C5149f73", // Replace with actual contract address
+  CONTRACT_ADDRESS: "0x30E0B298b428B9895dD6C65dc66277371610Dfe7", // Replace with actual contract address
   CHAIN_ID: 11155111, // Sepolia testnet
   CONTRACT_NAME: "AegisProtocol",
   CONTRACT_VERSION: "1",
