@@ -48,8 +48,8 @@ export const onFundsReleasedLog = (runtime: Runtime<Config>, log: EVMLog): strin
             user,
             merchant,
             amount,
-            blockNumber: Number(log.blockNumber || 0n),
-            transactionHash: bytesToHex(log.address), // Using contract address as placeholder
+            blockNumber: bytesToHex(log.blockNumber?.absVal || new Uint8Array()),
+            transactionHash: bytesToHex(log?.txHash || new Uint8Array()),
             logIndex: 0, // Log index not available in EVMLog type
         };
 

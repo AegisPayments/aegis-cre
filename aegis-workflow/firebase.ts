@@ -590,9 +590,9 @@ const postCapturedLog =
                     merchantAddress: { stringValue: eventLog.merchant },
                     amount: { integerValue: Number(eventLog.amount) },
                     txHash: { stringValue: eventLog.transactionHash },
-                    blockNumber: { integerValue: eventLog.blockNumber },
+                    blockNumber: { stringValue: eventLog.blockNumber },
                     transactionHash: { stringValue: eventLog.transactionHash },
-                    logIndex: { integerValue: eventLog.logIndex },
+                    logIndex: { integerValue: eventLog.logIndex || 0 },
                     createdAt: { integerValue: now },
                 },
             };
@@ -646,9 +646,9 @@ const postFundsReleasedLog =
                     merchantAddress: { stringValue: eventLog.merchant },
                     amount: { integerValue: Number(eventLog.amount) },
                     txHash: { stringValue: eventLog.transactionHash },
-                    blockNumber: { integerValue: eventLog.blockNumber },
+                    blockNumber: { stringValue: eventLog.blockNumber},
                     transactionHash: { stringValue: eventLog.transactionHash },
-                    logIndex: { integerValue: eventLog.logIndex },
+                    logIndex: { integerValue: eventLog.logIndex || 0 },
                     createdAt: { integerValue: now },
                 },
             };

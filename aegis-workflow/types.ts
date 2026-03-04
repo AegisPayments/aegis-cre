@@ -113,7 +113,7 @@ export interface CapturedEventLog {
     user: string; // User wallet address (0x...)
     merchant: string; // Merchant wallet address (0x...)
     amount: bigint; // Amount captured (as bigint from event)
-    blockNumber: number;
+    blockNumber: string;
     transactionHash: string;
     logIndex: number;
 }
@@ -125,7 +125,7 @@ export interface FundsReleasedEventLog {
     user: string; // User wallet address (0x...)
     merchant: string; // Merchant wallet address (0x...)
     amount: bigint; // Amount released (as bigint from event)
-    blockNumber: number;
+    blockNumber: string;
     transactionHash: string;
     logIndex: number;
 }
@@ -435,7 +435,7 @@ export interface FirestoreCapturedLogData {
             stringValue: string;
         };
         blockNumber: {
-            integerValue: number;
+            stringValue: string;
         };
         transactionHash: {
             stringValue: string;
@@ -468,7 +468,7 @@ export interface FirestoreFundsReleasedLogData {
             stringValue: string;
         };
         blockNumber: {
-            integerValue: number;
+            stringValue: string;
         };
         transactionHash: {
             stringValue: string;

@@ -1,6 +1,7 @@
 # CRE Simulation Commands
 
 - Add `--broadcast` flag to simulate and write the transaction onchain
+- Add `--engine-logs` flag to output detailed engine logs for debugging
 
 ## Non-interactive (recommended for testing scripts)
 
@@ -24,11 +25,22 @@ cre workflow simulate ./aegis-workflow
 ## Funds Captured Log Trigger Simulation
 
 ```bash
-cre workflow simulate my-workflow \
+cre workflow simulate aegis-workflow \
   --non-interactive \
   --trigger-index 1 \
-  --evm-tx-hash 0xyourtxhash \
+  --evm-tx-hash 0xb356c6344b026a3ee5893baced116219beb3bdfab7a6becffe1269d59161558e \
   --evm-event-index 1 \
+  --target local-simulation
+```
+
+## Funds Released Log Trigger Simulation
+
+```bash
+cre workflow simulate aegis-workflow \
+  --non-interactive \
+  --trigger-index 2 \
+  --evm-tx-hash 0xb356c6344b026a3ee5893baced116219beb3bdfab7a6becffe1269d59161558e \
+  --evm-event-index 0 \
   --target local-simulation
 ```
 
