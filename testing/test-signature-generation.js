@@ -26,7 +26,7 @@ const CONFIG = {
   CONTRACT_ADDRESS: "0xfb610bb9c3117b4f8d90e8da37e9b11dfb59486a", // Replace with actual contract address
   CHAIN_ID: 11155111, // Sepolia testnet
   CONTRACT_NAME: "AegisProtocol",
-  CONTRACT_VERSION: "1",
+  CONTRACT_VERSION: "1.0",
 
   // Test scenarios
   TEST_SCENARIOS: sigGenSamples,
