@@ -65,12 +65,21 @@ REMINDER:
 const fraudDetectionSystemPrompt = `
 You are an AI-powered fraud detection system for the AegisPay platform. Your task is to analyze payment authorization requests and determine whether they are legitimate or potentially fraudulent.
 
+IMPORTANT CONTEXT: These are AUTHORIZE transactions with cryptographically signed signatures, providing strong authentication. Be appropriately lenient for legitimate small transactions.
+
 Your decision-making process should consider:
 1. Transaction amount patterns and anomalies
 2. User transaction history and behavior patterns
-3. Signature and authentication validity context
+3. Signature and authentication validity context (signatures provide strong legitimacy evidence)
 4. Timing and frequency of transactions
 5. Amount reasonableness for the merchant-user relationship
+
+APPROVAL GUIDELINES:
+- Small amounts ($1-$100) with valid signatures: Generally approve unless clear fraud indicators
+- Moderate amounts ($100-$1000): Approve with normal transaction patterns
+- Large amounts (>$1000): Apply stricter scrutiny but consider signature validity
+- No transaction history + small amount + valid signature: DEFAULT TO APPROVE (not suspicious)
+- Very high amounts (>$10,000): Require strong legitimacy indicators
 
 OUTPUT FORMAT (CRITICAL):
 - You MUST respond with a SINGLE JSON object that satisfies this exact schema:
@@ -89,7 +98,7 @@ STRICT RULES:
 - Confidence scale: 0 = no confidence, 10000 = maximum confidence
 - Reasoning should be concise (under 100 characters)
 
-If you cannot make a determination, use "NO" with appropriate confidence and reasoning.
+If you cannot make a determination for small amounts (<$100) with valid signatures, DEFAULT TO "YES" with moderate confidence. Only use "NO" when there are clear fraud indicators.
 
 REMINDER:
 - Your ENTIRE response must be ONLY the JSON object described above.
@@ -338,19 +347,25 @@ export const assessFraudRisk = (runtime: Runtime<Config>, details: FraudAssessme
         runtime.log("[SIMULATION] Using mock AI fraud assessment");
 
         // Simple fraud simulation logic based on amount patterns
-        let decision = "YES"; // Default to legitimate
+        // Default to legitimate since this is an authorize function with valid signature
+        let decision = "YES";
         let confidence = 8000;
-        let reasoning = "Simulation mode - appears legitimate";
+        let reasoning = "Simulation mode - signed transaction appears legitimate";
 
-        // Basic fraud detection simulation
-        if (details.amount > 10000) {
+        // Basic fraud detection simulation - be more lenient for signed authorize transactions
+        if (details.amount > 20000) {
             decision = "NO";
             confidence = 6000;
-            reasoning = "Simulation mode - high amount flagged";
-        } else if (details.amount < 1) {
+            reasoning = "Simulation mode - very high amount flagged";
+        } else if (details.amount < 0.01) {
             decision = "NO";
             confidence = 7000;
-            reasoning = "Simulation mode - suspicious low amount";
+            reasoning = "Simulation mode - suspicious micro amount";
+        } else if (details.amount >= 1 && details.amount <= 1000) {
+            // Small to moderate amounts with signatures should be approved
+            decision = "YES";
+            confidence = 8500;
+            reasoning = "Simulation mode - small signed amount approved";
         }
 
         const mockResponse = JSON.stringify({
