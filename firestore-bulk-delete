@@ -1,0 +1,1 @@
+gcloud firestore bulk-delete --collection-ids 'authorization-logs','captured-logs','risk-assessments','funds-released-logs' --async
