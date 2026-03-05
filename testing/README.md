@@ -66,7 +66,7 @@ npm run test:secure-increment
 npm run test:secure-increment -- --broadcast
 ```
 
-## � **Broadcasting vs Simulation Mode**
+## 🚁 **Broadcasting vs Simulation Mode**
 
 ### **Simulation Mode (Default)**
 
@@ -84,9 +84,26 @@ When `--broadcast` flag is used:
 
 - ✅ All simulation mode features
 - ✅ **Actually broadcasts transactions to blockchain**
+- ✅ **Generates real transaction hashes** (needed for EVM log trigger testing)
 - ⚠️ **Uses real gas fees**
 - ⚠️ **Creates real on-chain state changes**
 - 🚨 **Only use on test networks**
+
+### **Passing Flags via NPM**
+
+When using npm scripts, pass flags after `--`:
+
+```bash
+# Safe simulation testing (default)
+npm run test:all
+
+# Real blockchain transactions (test network only!)
+npm run test:all -- --broadcast
+
+# Individual tests with broadcasting
+npm run test:authorize -- --broadcast
+npm run test:secure-increment -- --broadcast
+```
 
 ### **Usage Examples**
 
@@ -102,7 +119,32 @@ npm run test:authorize -- --broadcast
 npm run test:secure-increment -- --broadcast
 ```
 
-## �📋 **Test Scripts**
+### **EVM Log Trigger Testing**
+
+> **Important**: EVM log trigger simulations can **only** be run using CRE CLI commands, not JavaScript test scripts.
+
+To test EVM event processing:
+
+1. **First run HTTP tests with `--broadcast`** to generate real transactions:
+
+   ```bash
+   npm run test:authorize -- --broadcast
+   ```
+
+2. **Copy transaction hashes** from the output
+
+3. **Run EVM log simulation via CLI**:
+   ```bash
+   cre workflow simulate ./aegis-workflow \
+     --non-interactive --trigger-index 1 \
+     --evm-tx-hash YOUR_ACTUAL_TX_HASH \
+     --evm-event-index 1 \
+     --target local-simulation
+   ```
+
+See [CLI Simulation Guide](../cli-simulations/simulation_commands.md) for more details.
+
+## 📋 **Test Scripts**
 
 ### **test-signature-generation.js**
 

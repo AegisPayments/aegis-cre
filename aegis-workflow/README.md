@@ -1,53 +1,43 @@
-# Typescript Simple Workflow Example
+# AegisPay CRE Workflow
 
-This template provides a simple Typescript workflow example. It shows how to create a simple "Hello World" workflow using Typescript.
+This directory contains the main Chainlink Runtime Environment (CRE) workflow for AegisPay's AI-powered payment authorization system.
 
-Steps to run the example
+## Quick Setup
 
-## 1. Update .env file
+1. **Install dependencies**:
 
-You need to add a private key to env file. This is specifically required if you want to simulate chain writes. For that to work the key should be valid and funded.
-If your workflow does not do any chain write then you can just put any dummy key as a private key. e.g.
+   ```bash
+   bun install
+   ```
 
-```
-CRE_ETH_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000001
-```
+2. **Configure environment**:
 
-Note: Make sure your `workflow.yaml` file is pointing to the config.json, example:
+   ```bash
+   cp config.local.json.example config.local.json
+   # Edit config.local.json with your Firebase, LLM, and EVM configurations
+   ```
 
-```yaml
-staging-settings:
-  user-workflow:
-    workflow-name: "hello-world"
-  workflow-artifacts:
-    workflow-path: "./main.ts"
-    config-path: "./config.json"
-```
+3. **Simulate the workflow**:
+   ```bash
+   # Run from repository root
+   cre workflow simulate ./aegis-workflow --target local-simulation
+   ```
 
-## 2. Install dependencies
+## Configuration
 
-If `bun` is not already installed, see https://bun.com/docs/installation for installing in your environment.
+Ensure your `config.local.json` includes:
 
-```bash
-cd <workflow-name> && bun install
-```
+- **Firebase credentials** for transaction history storage
+- **LLM API keys** (Gemini or OpenAI) for risk assessment
+- **EVM configuration** with contract address and chain details
+- **Private key** for on-chain transaction execution
 
-Example: For a workflow directory named `hello-world` the command would be:
+## Workflow Structure
 
-```bash
-cd hello-world && bun install
-```
+- **`main.ts`** - Entry point and trigger registration
+- **`firebase.ts`** - Firestore integration for audit logging
+- **`llm.ts`** - AI risk assessment engine
+- **`types.ts`** - TypeScript type definitions
+- **`cre-callbacks/`** - HTTP and EVM log trigger handlers
 
-## 3. Simulate the workflow
-
-Run the command from <b>project root directory</b>
-
-```bash
-cre workflow simulate <path-to-workflow-directory> --target=staging-settings
-```
-
-Example: For workflow named `hello-world` the command would be:
-
-```bash
-cre workflow simulate ./hello-world --target=staging-settings
-```
+For detailed documentation, see the [main repository README](../README.md).

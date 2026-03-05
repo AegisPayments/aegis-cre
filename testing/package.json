@@ -7,6 +7,7 @@
         "test:signatures": "node test-signature-generation.js",
         "test:authorize": "node test-authorize-workflow.js",
         "test:secure-increment": "node test-secure-increment-workflow.js",
+        "test:firebase": "node test-firebase-connection.js",
         "test:all": "node run-all-tests.js",
         "test:authandinc": "npm run test:authorize && npm run test:secure-increment"
     },
