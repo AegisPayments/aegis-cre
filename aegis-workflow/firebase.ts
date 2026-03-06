@@ -126,17 +126,21 @@ export function writeRiskAssessmentLog(
 
 /**
  * Writes authorization log to Firestore for audit trail.
- * Records the authorization details and transaction hash for each authorize call.
+ * Records the authorization details, fraud decision, and transaction hash for each authorize call.
  *
  * @param runtime - CRE runtime instance with config and secrets
  * @param payload - Original authorize request payload
- * @param txHash - Transaction hash from the authorize execution
+ * @param txHash - Transaction hash from the authorize execution (empty if rejected)
+ * @param fraudDecision - LLM fraud decision: "YES" (legitimate) or "NO" (fraud detected)
+ * @param fraudConfidence - LLM fraud confidence score (0-10000)
  * @returns Firestore write response with document metadata
  */
 export function writeAuthorizeLog(
     runtime: Runtime<Config>,
     payload: AuthorizePayload,
-    txHash: string
+    txHash: string,
+    fraudDecision: string,
+    fraudConfidence: number
 ): FirestoreWriteResponse {
     try {
         const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
@@ -157,7 +161,7 @@ export function writeAuthorizeLog(
         const writeResult: FirestoreWriteResponse = httpClient
             .sendRequest(
                 runtime,
-                postAuthorizeLog(tokenResult.idToken, firestoreProjectId.value, payload, txHash),
+                postAuthorizeLog(tokenResult.idToken, firestoreProjectId.value, payload, txHash, fraudDecision, fraudConfidence),
                 consensusIdenticalAggregation<FirestoreWriteResponse>()
             )(runtime.config)
             .result();
@@ -363,11 +367,14 @@ const queryHistory =
                                     doc.fields.merchantAddress?.stringValue === merchantAddress
                                 )
                                 .forEach(doc => {
+                                    const fraudDecision = doc.fields.fraudDecision?.stringValue || "YES";
                                     history.push({
                                         amount: parseInt(doc.fields.amount?.integerValue || "0"),
                                         timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
                                         merchant: doc.fields.merchantAddress?.stringValue || "",
                                         user: doc.fields.userAddress?.stringValue || "",
+                                        decision: fraudDecision === "YES" ? "AUTHORIZED" : "DECLINED",
+                                        merchantType: (doc.fields.merchantType?.stringValue || "RETAIL") as any,
                                     });
                                 });
                         }
@@ -402,15 +409,17 @@ const queryHistory =
                             riskResponse.documents
                                 .filter(doc =>
                                     doc.fields.userAddress?.stringValue === userAddress &&
-                                    doc.fields.merchantAddress?.stringValue === merchantAddress &&
-                                    doc.fields.riskDecision?.stringValue === "YES" // Only approved increments
+                                    doc.fields.merchantAddress?.stringValue === merchantAddress
                                 )
                                 .forEach(doc => {
+                                    const riskDecision = doc.fields.riskDecision?.stringValue || "NO";
                                     history.push({
                                         amount: parseInt(doc.fields.requestedTotal?.integerValue || "0"),
                                         timestamp: parseInt(doc.fields.createdAt?.integerValue || "0"),
                                         merchant: doc.fields.merchantAddress?.stringValue || "",
                                         user: doc.fields.userAddress?.stringValue || "",
+                                        decision: riskDecision === "YES" ? "INCREMENT_APPROVED" : "INCREMENT_DECLINED",
+                                        merchantType: (doc.fields.merchantType?.stringValue || "RETAIL") as any,
                                     });
                                 });
                         }
@@ -515,7 +524,7 @@ const postRiskAssessmentLog =
  * @returns Function that performs the HTTP request and returns the Firestore response
  */
 const postAuthorizeLog =
-    (idToken: string, projectId: string, payload: AuthorizePayload, txHash: string) =>
+    (idToken: string, projectId: string, payload: AuthorizePayload, txHash: string, fraudDecision: string, fraudConfidence: number) =>
         (sendRequester: HTTPSendRequester, config: Config): FirestoreWriteResponse => {
             const now = Date.now();
 
@@ -523,9 +532,12 @@ const postAuthorizeLog =
                 fields: {
                     userAddress: { stringValue: payload.user },
                     merchantAddress: { stringValue: payload.merchant },
+                    merchantType: { stringValue: payload.merchantType },
                     amount: { integerValue: payload.amount },
                     nonce: { integerValue: payload.nonce },
                     signature: { stringValue: payload.signature },
+                    fraudDecision: { stringValue: fraudDecision },
+                    fraudConfidence: { integerValue: fraudConfidence },
                     txHash: { stringValue: txHash },
                     functionName: { stringValue: payload.functionName },
                     createdAt: { integerValue: now },

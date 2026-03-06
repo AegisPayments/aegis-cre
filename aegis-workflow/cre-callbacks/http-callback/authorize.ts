@@ -49,6 +49,7 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         // ═══════════════════════════════════════════════════════════════
         authorizePayload = JSON.parse(inputString) as AuthorizePayload;
         runtime.log(`[Step 1] Authorize Request:`);
+        runtime.log(`  Merchant Type: ${authorizePayload.merchantType}`);
         runtime.log(`  User: ${authorizePayload.user}`);
         runtime.log(`  Merchant: ${authorizePayload.merchant}`);
         runtime.log(`  Amount: $${authorizePayload.amount}`);
@@ -56,13 +57,13 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         runtime.log(`  Signature: ${authorizePayload.signature.substring(0, 20)}...`);
 
         // Validate required fields for authorize
-        if (!authorizePayload.user || !authorizePayload.merchant ||
+        if (!authorizePayload.merchantType || !authorizePayload.user || !authorizePayload.merchant ||
             authorizePayload.amount === undefined || authorizePayload.nonce === undefined ||
             !authorizePayload.signature) {
             runtime.log("[ERROR] Missing required fields in authorize request");
             return JSON.stringify({
                 status: "error",
-                message: "Missing required fields: user, merchant, amount, nonce, signature"
+                message: "Missing required fields: merchantType, user, merchant, amount, nonce, signature"
             });
         }
 
@@ -97,7 +98,7 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         );
 
         const historyString = transactionHistory.length > 0
-            ? `Recent transactions between ${authorizePayload.user} and ${authorizePayload.merchant}: [${transactionHistory.map(tx => `$${tx.amount}`).join(', ')}]`
+            ? `Recent transactions between ${authorizePayload.user} and ${authorizePayload.merchant}: [${transactionHistory.map(tx => `$${tx.amount} (${tx.decision}, ${tx.merchantType})`).join(', ')}]`
             : `No transaction history found between ${authorizePayload.user} and ${authorizePayload.merchant}`;
 
         runtime.log(`[Step 2] Transaction History: ${historyString}`);
@@ -132,6 +133,15 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         // Block transaction if fraud detected
         if (fraudResult.result === "NO") {
             runtime.log(`[Step 2] ❌ Transaction blocked due to fraud detection`);
+
+            // Log the rejected authorization to Firestore for audit trail
+            runtime.log("[Step 2] Writing rejected authorization log to Firestore...");
+            try {
+                writeAuthorizeLog(runtime, authorizePayload, "", "NO", fraudResult.confidence);
+            } catch (logError) {
+                runtime.log(`[WARNING] Failed to log rejected authorization: ${logError}`);
+            }
+
             return JSON.stringify({
                 status: "fraud_detected",
                 message: "Transaction blocked due to fraud detection",
@@ -159,7 +169,9 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         const logResult: FirestoreWriteResponse = writeAuthorizeLog(
             runtime,
             authorizePayload,
-            txHash
+            txHash,
+            "YES",
+            fraudResult.confidence
         );
 
         runtime.log(`[Step 4] Authorization logged: ${logResult.name}`);
@@ -190,7 +202,7 @@ export const handleAuthorize = (runtime: Runtime<Config>, inputString: string): 
         // Still log the attempt even if it failed (if we have the required data)
         if (authorizePayload) {
             try {
-                writeAuthorizeLog(runtime, authorizePayload, "");
+                writeAuthorizeLog(runtime, authorizePayload, "", "ERROR", 0);
             } catch (logError) {
                 runtime.log(`[WARNING] Failed to log error case: ${logError}`);
             }

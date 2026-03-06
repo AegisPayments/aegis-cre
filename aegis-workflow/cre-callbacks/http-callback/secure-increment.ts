@@ -80,7 +80,7 @@ export const handleSecureIncrement = (runtime: Runtime<Config>, inputString: str
 
         // Format history for LLM prompt
         const historyString = transactionHistory.length > 0
-            ? `Recent transactions between ${riskPayload.user} and ${riskPayload.merchant}: [${transactionHistory.map(tx => `$${tx.amount}`).join(', ')}]`
+            ? `Recent transactions between ${riskPayload.user} and ${riskPayload.merchant}: [${transactionHistory.map(tx => `$${tx.amount} (${tx.decision}, ${tx.merchantType})`).join(', ')}]`
             : `No transaction history found between ${riskPayload.user} and ${riskPayload.merchant}`;
 
         runtime.log(`[Step A] Transaction History: ${historyString}`);

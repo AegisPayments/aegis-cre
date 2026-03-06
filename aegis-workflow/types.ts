@@ -99,6 +99,7 @@ export interface RiskAssessmentPayload extends BasePayload {
  */
 export interface AuthorizePayload extends BasePayload {
     functionName: "authorize";
+    merchantType: MerchantType;
     user: string; // User wallet address (0x...)
     merchant: string; // Merchant wallet address (0x...)
     amount: number; // Amount to authorize
@@ -138,6 +139,8 @@ export interface TransactionHistoryItem {
     timestamp: number;
     merchant: string;
     user: string;
+    decision: "AUTHORIZED" | "DECLINED" | "INCREMENT_APPROVED" | "INCREMENT_DECLINED";
+    merchantType: MerchantType;
 }
 
 /**
@@ -320,6 +323,9 @@ export interface FirestoreAuthorizeLogData {
         merchantAddress: {
             stringValue: string;
         };
+        merchantType: {
+            stringValue: string;
+        };
         amount: {
             integerValue: number;
         };
@@ -328,6 +334,12 @@ export interface FirestoreAuthorizeLogData {
         };
         signature: {
             stringValue: string;
+        };
+        fraudDecision: {
+            stringValue: string;
+        };
+        fraudConfidence: {
+            integerValue: number;
         };
         txHash: {
             stringValue: string;
