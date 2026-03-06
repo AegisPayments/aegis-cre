@@ -79,7 +79,7 @@ cre workflow simulate ./aegis-workflow \
 cre workflow simulate ./aegis-workflow \
   --non-interactive --trigger-index 2 \
   --evm-tx-hash YOUR_ACTUAL_TX_HASH \
-  --evm-event-index 1 \
+  --evm-event-index 0 \
   --target local-simulation
 ```
 
