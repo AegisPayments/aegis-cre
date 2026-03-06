@@ -258,36 +258,6 @@ export interface RiskAssessmentDetails {
  *********************************/
 
 /**
- * Firestore document write payload structure for transaction history.
- * All fields must follow Firestore's typed field format.
- */
-export interface FirestoreTransactionData {
-    fields: {
-        userAddress: {
-            stringValue: string;
-        };
-        merchantAddress: {
-            stringValue: string;
-        };
-        amount: {
-            integerValue: number;
-        };
-        timestamp: {
-            integerValue: number;
-        };
-        txHash: {
-            stringValue: string;
-        };
-        merchantType: {
-            stringValue: string;
-        };
-        reason: {
-            stringValue: string;
-        };
-    };
-}
-
-/**
  * Firestore document write payload structure for risk assessment logs.
  * All fields must follow Firestore's typed field format.
  */
@@ -315,51 +285,6 @@ export interface FirestoreRiskLogData {
             stringValue: string;
         };
         riskDecision: {
-            stringValue: string;
-        };
-        confidence: {
-            integerValue: number;
-        };
-        txHash: {
-            stringValue: string;
-        };
-        llmResponse: {
-            stringValue: string;
-        };
-        responseId: {
-            stringValue: string;
-        };
-        rawJsonString: {
-            stringValue: string;
-        };
-        createdAt: {
-            integerValue: number;
-        };
-    };
-}
-
-/**
- * Firestore document write payload structure for fraud assessment logs.
- * All fields must follow Firestore's typed field format.
- */
-export interface FirestoreFraudLogData {
-    fields: {
-        userAddress: {
-            stringValue: string;
-        };
-        merchantAddress: {
-            stringValue: string;
-        };
-        amount: {
-            integerValue: number;
-        };
-        nonce: {
-            integerValue: number;
-        };
-        signature: {
-            stringValue: string;
-        };
-        fraudDecision: {
             stringValue: string;
         };
         confidence: {

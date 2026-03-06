@@ -42,25 +42,15 @@ export function getRecentTransactions(
     queryHistoryType: QueryHistoryType = "both"
 ): TransactionHistoryItem[] {
     try {
-        const firestoreApiKey = runtime.getSecret({ id: "FIREBASE_API_KEY" }).result();
         const firestoreProjectId = runtime.getSecret({ id: "FIREBASE_PROJECT_ID" }).result();
 
         const httpClient = new cre.capabilities.HTTPClient();
-
-        // Obtain an ID token via Firebase anonymous authentication
-        const tokenResult: SignupNewUserResponse = httpClient
-            .sendRequest(
-                runtime,
-                postFirebaseIdToken(firestoreApiKey.value),
-                consensusIdenticalAggregation<SignupNewUserResponse>()
-            )(runtime.config)
-            .result();
 
         // Query Firestore for recent transactions
         const queryResult: TransactionHistoryItem[] = httpClient
             .sendRequest(
                 runtime,
-                queryHistory(tokenResult.idToken, firestoreProjectId.value, userAddress, merchantAddress, queryHistoryType),
+                queryHistory(firestoreProjectId.value, userAddress, merchantAddress, queryHistoryType),
                 consensusIdenticalAggregation<TransactionHistoryItem[]>()
             )(runtime.config)
             .result();
@@ -68,13 +58,15 @@ export function getRecentTransactions(
         // Return the combined history
         return queryResult;
     } catch (error) {
+        runtime.log(`Error retrieving recent transactions: ${error}`);
+        throw error;
         // Handle simulation mode or missing secrets by returning mock data
-        runtime.log("[SIMULATION] Using mock transaction history data");
-        return [
-            { amount: 15, timestamp: Date.now() - 86400000, merchant: merchantAddress, user: userAddress },
-            { amount: 22, timestamp: Date.now() - 172800000, merchant: merchantAddress, user: userAddress },
-            { amount: 18, timestamp: Date.now() - 259200000, merchant: merchantAddress, user: userAddress }
-        ];
+        // runtime.log("[SIMULATION] Using mock transaction history data");
+        // return [
+        //     { amount: 15, timestamp: Date.now() - 86400000, merchant: merchantAddress, user: userAddress },
+        //     { amount: 22, timestamp: Date.now() - 172800000, merchant: merchantAddress, user: userAddress },
+        //     { amount: 18, timestamp: Date.now() - 259200000, merchant: merchantAddress, user: userAddress }
+        // ];
     }
 }
 
@@ -332,7 +324,6 @@ const postFirebaseIdToken =
  * Queries Firestore for combined history (authorizations + risk assessments) between a user and merchant.
  * Returns unified TransactionHistoryItem array for risk assessment context.
  *
- * @param idToken - Firebase authentication token
  * @param projectId - Firebase project ID
  * @param userAddress - User wallet address to filter by
  * @param merchantAddress - Merchant wallet address to filter by
@@ -340,7 +331,7 @@ const postFirebaseIdToken =
  * @returns Function that performs the HTTP request and returns unified history array
  */
 const queryHistory =
-    (idToken: string, projectId: string, userAddress: string, merchantAddress: string, queryType: QueryHistoryType = "both") =>
+    (projectId: string, userAddress: string, merchantAddress: string, queryType: QueryHistoryType = "both") =>
         (sendRequester: HTTPSendRequester, config: Config): TransactionHistoryItem[] => {
             const history: TransactionHistoryItem[] = [];
 
@@ -351,7 +342,7 @@ const queryHistory =
                         url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/authorization-logs?orderBy=createdAt%20desc&pageSize=10`,
                         method: "GET" as const,
                         headers: {
-                            Authorization: `Bearer ${idToken}`,
+                            // Authorization: `Bearer ${idToken}`, // TODO: no need to send the id token as collection is public
                             "Content-Type": "application/json",
                         },
                         cacheSettings: {
@@ -393,7 +384,7 @@ const queryHistory =
                         url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/risk-assessments?orderBy=createdAt%20desc&pageSize=10`,
                         method: "GET" as const,
                         headers: {
-                            Authorization: `Bearer ${idToken}`,
+                            // Authorization: `Bearer ${idToken}`,
                             "Content-Type": "application/json",
                         },
                         cacheSettings: {
