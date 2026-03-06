@@ -34,8 +34,13 @@ TRANSACTION HISTORY FORMAT:
 - DECLINED means a previous authorization was rejected by fraud detection
 - INCREMENT_DECLINED means a previous payment adjustment was rejected by risk assessment
 
+IMPORTANT - ABSOLUTE vs PERCENTAGE VARIANCE:
+- Always consider BOTH the percentage variance AND the absolute dollar increase
+- A high percentage on a small base amount (e.g. $18 -> $30 = 66.7% but only $12 increase) is far less risky than the same percentage on a large amount
+- Small absolute increases ($1-$50) should be treated leniently even if the percentage looks high, especially for dynamic-pricing merchant types
+
 Your decision-making process should consider:
-1. The variance between current authorization and requested total
+1. The variance between current authorization and requested total (both % and absolute $)
 2. Transaction history patterns for this user-merchant pair, INCLUDING PAST DECISIONS
 3. The merchant type and its typical variance allowances
 4. The provided reason for the adjustment
@@ -142,17 +147,19 @@ const getMerchantSpecificRules = (merchantType: MerchantType): string => {
         case "EV_CHARGER":
             return `
 MERCHANT TYPE: Electric Vehicle Charging Station
-VARIANCE ALLOWANCE: Up to 50% increase is acceptable
-RATIONALE: EV charging costs vary significantly based on:
-- Dynamic electricity pricing (peak/off-peak rates)
-- Charging speed selection (fast vs standard charging)
-- Session duration changes (longer than expected charging time)
+VARIANCE ALLOWANCE: Up to 200% increase is acceptable
+RATIONALE: EV charging costs vary dramatically based on:
+- Dynamic electricity pricing (peak/off-peak rates can differ 3-5x)
+- Charging speed selection (DC fast charging vs Level 2 can be 4-10x price difference)
+- Session duration changes (battery was emptier than expected, slow charge curve at high SoC)
 - Battery state and charging curve efficiency
+- Idle/overstay fees if vehicle is not moved after charging completes
 
 APPROVAL CRITERIA:
-- Variance up to 25%: Generally approve with minimal scrutiny
-- Variance 25-50%: Approve if reason mentions pricing/speed changes
-- Variance >50%: Requires compelling technical justification
+- Variance up to 50%: Generally approve with minimal scrutiny
+- Variance 50-100%: Approve if reason mentions pricing changes, speed upgrades, or extended sessions
+- Variance 100-200%: Approve if reason provides clear technical justification (speed tier change, peak pricing, overstay)
+- Variance >200%: Requires exceptional justification
 `;
 
         case "RETAIL":
@@ -172,17 +179,19 @@ APPROVAL CRITERIA:
         case "RIDE_SHARE":
             return `
 MERCHANT TYPE: Ride Share Service
-VARIANCE ALLOWANCE: Up to 25% increase is acceptable
-RATIONALE: Ride share pricing includes many dynamic factors:
-- Surge pricing during high-demand periods
-- Route changes due to traffic or passenger requests
-- Wait times and additional stops
+VARIANCE ALLOWANCE: Up to 100% increase is acceptable
+RATIONALE: Ride share pricing is inherently volatile and can legitimately double or more:
+- Surge pricing during high-demand periods (2x-3x multipliers are common)
+- Major route changes due to traffic, detours, or road closures
+- Wait times and additional stops requested by passengers
 - Tips and service fees
+- Weather events causing longer routes
 
 APPROVAL CRITERIA:
-- Variance up to 15%: Generally approve for standard ride adjustments
-- Variance 15-25%: Approve if reason mentions surge pricing or route changes
-- Variance >25%: Requires justification for extreme pricing conditions
+- Variance up to 30%: Generally approve for standard ride adjustments
+- Variance 30-75%: Approve if reason mentions surge pricing, traffic, or route changes
+- Variance 75-100%: Approve with strong justification (major detour, extreme surge, weather)
+- Variance >100%: Requires exceptional justification - likely error unless extreme circumstances
 `;
 
         default:
