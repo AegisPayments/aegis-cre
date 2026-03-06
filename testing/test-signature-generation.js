@@ -23,7 +23,7 @@ const CONFIG = {
     process.env.DEV_WALLET_PRIVATE_KEY, // * Using the dev wallet 0x9F77cBDb561aaD32b403695306e3eea53F9B40e7 instead of a randomly generated one.
 
   // Contract configuration (update these to match your deployment)
-  CONTRACT_ADDRESS: "0xfb610bb9c3117b4f8d90e8da37e9b11dfb59486a", // Replace with actual contract address
+  CONTRACT_ADDRESS: "0x41259482E8F1b654e4E7d3d0DCF12B28670c5d44", // Replace with actual contract address
   CHAIN_ID: 11155111, // Sepolia testnet
   CONTRACT_NAME: "AegisProtocol",
   CONTRACT_VERSION: "1.0",
