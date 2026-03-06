@@ -35,7 +35,7 @@ The input JSON should contain: `user`, `merchant`, `amount`, and `nonce` fields.
 
 ```bash
 cre workflow simulate ./aegis-workflow \
-  --http-payload '{"functionName": "authorize", "user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "merchant": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "amount": 1000, "nonce": 0, "signature": "0xb1bf4b94003346c217da6082fdd956bade14d2af17c72f43c8336d3ee1e4b8787fffddc0d0d6ff53bb33c8df36b2131956901ca818d7ea02aa37d6c0e32c363d1b"}' \
+  --http-payload '{"functionName": "authorize", "merchantType": "RETAIL", "user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "merchant": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "amount": 1000, "nonce": 0, "signature": "0xb1bf4b94003346c217da6082fdd956bade14d2af17c72f43c8336d3ee1e4b8787fffddc0d0d6ff53bb33c8df36b2131956901ca818d7ea02aa37d6c0e32c363d1b"}' \
   --target local-simulation --non-interactive --trigger-index 0
 ```
 

@@ -181,7 +181,7 @@ echo '{"user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "merchant": "0x9F77
 
 ```bash
 cre workflow simulate ./aegis-workflow \
-  --http-payload '{"functionName": "authorize", "user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "merchant": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "amount": 100, "nonce": 1, "signature": "0x_YOUR_GENERATED_SIGNATURE_"}' \
+  --http-payload '{"functionName": "authorize", "merchantType": "RETAIL", "user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "merchant": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7", "amount": 100, "nonce": 1, "signature": "0x_YOUR_GENERATED_SIGNATURE_"}' \
   --target local-simulation --non-interactive --trigger-index 0
 ```
 

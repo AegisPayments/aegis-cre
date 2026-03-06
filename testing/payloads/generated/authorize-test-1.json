@@ -1,5 +1,6 @@
 {
   "functionName": "authorize",
+  "merchantType": "RETAIL",
   "user": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7",
   "merchant": "0x9F77cBDb561aaD32b403695306e3eea53F9B40e7",
   "amount": 1000,

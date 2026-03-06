@@ -216,6 +216,7 @@ Master orchestrator for the complete test suite.
 ```json
 {
   "functionName": "authorize",
+  "merchantType": "RETAIL", // or "EV_CHARGER", "RIDE_SHARE"
   "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "merchant": "0x0987654321098765432109876543210987654321",
   "amount": 100,

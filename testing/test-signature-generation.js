@@ -130,9 +130,17 @@ function verifySignature(user, merchant, amount, nonce, signature) {
 /**
  * Create test payload for CRE authorize function
  */
-function createAuthorizePayload(user, merchant, amount, nonce, signature) {
+function createAuthorizePayload(
+  user,
+  merchant,
+  amount,
+  nonce,
+  signature,
+  merchantType = "RETAIL",
+) {
   return {
     functionName: "authorize",
+    merchantType,
     user,
     merchant,
     amount,
@@ -214,6 +222,7 @@ async function main() {
         scenario.amount,
         scenario.nonce,
         signature,
+        scenario.merchantType || "RETAIL",
       );
 
       testPayloads.push(payload);
