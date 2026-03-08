@@ -104,10 +104,18 @@ HISTORY-BASED RULES (CRITICAL):
 - Clean history (all AUTHORIZED/INCREMENT_APPROVED) with consistent merchant types is a positive signal
 - If history shows mostly DECLINED but the current amount is small and signed, still consider carefully rather than auto-rejecting
 
+AMOUNT ANOMALY DETECTION (CRITICAL):
+- Compare the current transaction amount to the user's historical average and maximum
+- If the current amount is MORE THAN 5x the user's historical average, treat this as an anomaly even if history is clean
+- Example: user with two $18 transactions suddenly requesting $500 (28x average) is highly suspicious regardless of signature validity
+- Anomalous jumps for amounts >$200 should be rejected or flagged with low confidence
+- This rule applies even when the absolute amount would otherwise be in the "approve" range
+- If there is NO transaction history, this rule does not apply (new users get default leniency)
+
 APPROVAL GUIDELINES:
 - Small amounts ($1-$100) with valid signatures and clean history: Approve
 - Small amounts ($1-$100) with valid signatures but recent DECLINED history: Apply scrutiny, may still approve if amount is reasonable
-- Moderate amounts ($100-$1000): Approve with clean transaction patterns
+- Moderate amounts ($100-$1000): Approve ONLY if amount is consistent with user's history (within 5x of average). If it's a dramatic increase, reject
 - Large amounts (>$1000): Apply stricter scrutiny but consider signature validity and merchant type
 - No transaction history + small amount + valid signature: DEFAULT TO APPROVE (new users are not suspicious)
 - Very high amounts (>$10,000): Require strong legitimacy indicators and clean history
