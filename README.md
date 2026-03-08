@@ -456,6 +456,7 @@ The testing framework generates comprehensive reports:
 - [ ] **Real-Time Analytics**: Enhanced monitoring and alerting capabilities
 - [ ] **Mobile SDK**: Native mobile integration for seamless UX
 - [ ] **Merchant Dashboard**: Web interface for merchant analytics and controls
+- [ ] **V2 - Open Loop Evolution**: In V2, the AI Risk Engine will transition to an open-loop settlement network, capable of routing Visa-style "Auth & Capture" requests across multiple independent yield-bearing vaults.
 
 ---
 
